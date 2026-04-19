@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mux/mux-video": "^0.30.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

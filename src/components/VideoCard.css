@@ -16,7 +16,8 @@
   pointer-events: none;
 }
 
-.video-card video {
+.video-card video,
+.video-card mux-video {
   width: 100%;
   height: auto;
   display: block;
