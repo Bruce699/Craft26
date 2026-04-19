@@ -1,0 +1,14 @@
+.feed-grid {
+  box-sizing: border-box;
+}
+
+.feed-grid__columns {
+  display: flex;
+  align-items: flex-start;
+}
+
+.feed-grid__column {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
