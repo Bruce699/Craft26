@@ -3,10 +3,10 @@ import VideoCard from './VideoCard'
 import { feedColumns } from '../data/feedData'
 import './FeedGrid.css'
 
-const H_PADDING = 16  // left + right edge padding (px)
-const COL_GAP = 8     // gap between columns (px)
+const H_PADDING = 16
+const COL_GAP = 8
 const NUM_COLS = 3
-const TOP_OFFSET = 110 // distance from top of page (px)
+const TOP_OFFSET = 110
 
 function useWindowWidth() {
   const [width, setWidth] = useState(() => document.documentElement.clientWidth)
@@ -20,16 +20,22 @@ function useWindowWidth() {
   return width
 }
 
-export default function FeedGrid() {
+export default function FeedGrid({
+  phase = 'feed',
+  originId = null,
+  originRect = null,
+  originTargetWidth = 0,
+  sceneZoom = 1,
+  onItemDoubleClick,
+}) {
   const windowWidth = useWindowWidth()
 
-  // columnWidth = (windowWidth - 2×padding - 2×gap) / 3
   const columnWidth =
     (windowWidth - 2 * H_PADDING - (NUM_COLS - 1) * COL_GAP) / NUM_COLS
 
   return (
     <div
-      className="feed-grid"
+      className={`feed-grid feed-grid--phase-${phase}`}
       style={{
         paddingTop: TOP_OFFSET,
         paddingLeft: H_PADDING,
@@ -51,6 +57,12 @@ export default function FeedGrid() {
                 playbackId={item.playbackId}
                 name={item.name}
                 date={item.date}
+                phase={phase}
+                isOrigin={originId === item.id}
+                originRect={originRect}
+                originTargetWidth={originTargetWidth}
+                sceneZoom={sceneZoom}
+                onDoubleClick={onItemDoubleClick}
               />
             ))}
           </div>

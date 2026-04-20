@@ -52,6 +52,11 @@
   pointer-events: none;
 }
 
+/* Suppress the hover tag once we leave feed mode */
+body.is-dark .video-card__info {
+  display: none;
+}
+
 .video-card:hover .video-card__info {
   opacity: 1;
   transform: translateY(0);

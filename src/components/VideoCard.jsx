@@ -1,21 +1,44 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import '@mux/mux-video'
 import './VideoCard.css'
 
-// threshold: play when ≥30% of the video is visible in the viewport
 const VISIBILITY_THRESHOLD = 0.3
+const EXPLOSION_DISTANCE = 1600 // px to fly outward
 
-export default function VideoCard({ id, playbackId, name, date }) {
+export default function VideoCard({
+  id,
+  playbackId,
+  name,
+  date,
+  phase = 'feed',
+  isOrigin = false,
+  originRect = null,
+  originTargetWidth = 0,
+  sceneZoom = 1,
+  onDoubleClick,
+}) {
   const videoRef = useRef(null)
+  const rootRef = useRef(null)
+  const originalRectRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
 
-  // Observe visibility → flip state
+  // Snapshot the card's viewport rect while it's still in normal feed layout.
+  // Once transforms kick in, getBoundingClientRect would return the *moved*
+  // position, so we stop updating the snapshot once we leave the feed phase.
   useEffect(() => {
+    if (phase === 'feed' && rootRef.current) {
+      originalRectRef.current = rootRef.current.getBoundingClientRect()
+    }
+  })
+
+  // Auto play/pause based on viewport visibility — only in feed mode.
+  // Once the easter egg triggers, the origin is paused explicitly and all
+  // other cards leave the screen, so we disable the observer-driven playback.
+  useEffect(() => {
+    if (phase !== 'feed') return
     const video = videoRef.current
     if (!video) return
 
-    // Force-mute imperatively — React's `muted` prop on custom elements
-    // isn't always reflected as the underlying media property
     video.muted = true
     video.volume = 0
 
@@ -26,12 +49,10 @@ export default function VideoCard({ id, playbackId, name, date }) {
 
     observer.observe(video)
     return () => observer.disconnect()
-  }, [])
+  }, [phase])
 
-  // Drive play/pause from state. Re-trying on canplay handles the case where
-  // the first play() fires before HLS/metadata is ready, or where autoplay
-  // was blocked until the user interacted with the page.
   useEffect(() => {
+    if (phase !== 'feed') return
     const video = videoRef.current
     if (!video) return
 
@@ -52,10 +73,90 @@ export default function VideoCard({ id, playbackId, name, date }) {
     } else {
       video.pause()
     }
-  }, [isVisible])
+  }, [isVisible, phase])
+
+  // When this card becomes the origin, pause on the current frame
+  useEffect(() => {
+    if (isOrigin) {
+      const video = videoRef.current
+      if (video) video.pause()
+    }
+  }, [isOrigin])
+
+  const handleDoubleClick = () => {
+    if (phase !== 'feed' || !onDoubleClick) return
+    const rect = rootRef.current?.getBoundingClientRect()
+    if (!rect) return
+    onDoubleClick(id, rect)
+  }
+
+  // Compute the transform for this card based on phase + origin rect.
+  // For non-origin cards: fly outward from origin center and fade.
+  // For the origin card: translate to viewport center, then scale down.
+  const transitionStyle = useMemo(() => {
+    if (phase === 'feed' || !originRect) return null
+
+    const selfRect = originalRectRef.current
+
+    if (isOrigin) {
+      // Center of viewport minus origin card center in viewport coords
+      const originCx = originRect.left + originRect.width / 2
+      const originCy = originRect.top + originRect.height / 2
+      const dx = window.innerWidth / 2 - originCx
+      const dy = window.innerHeight / 2 - originCy
+      const baseScale = originTargetWidth / originRect.width
+
+      if (phase === 'exploding') {
+        return {
+          transform: `translate(${dx}px, ${dy}px) scale(1)`,
+          transition: 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)',
+          zIndex: 100,
+        }
+      }
+      // centering: animate in with base scale; coordinate: track R3F zoom
+      const scale = phase === 'coordinate' ? baseScale * sceneZoom : baseScale
+      return {
+        transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+        transition:
+          phase === 'centering'
+            ? 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)'
+            : 'none',
+        zIndex: 100,
+      }
+    }
+
+    // Non-origin: fly away from origin center
+    if (!selfRect) {
+      // First render after trigger — hide; next render will place it
+      return { opacity: 0, transition: 'none' }
+    }
+    const originCx = originRect.left + originRect.width / 2
+    const originCy = originRect.top + originRect.height / 2
+    const selfCx = selfRect.left + selfRect.width / 2
+    const selfCy = selfRect.top + selfRect.height / 2
+    let vx = selfCx - originCx
+    let vy = selfCy - originCy
+    const len = Math.hypot(vx, vy) || 1
+    vx = (vx / len) * EXPLOSION_DISTANCE
+    vy = (vy / len) * EXPLOSION_DISTANCE
+
+    return {
+      transform: `translate(${vx}px, ${vy}px)`,
+      opacity: 0,
+      transition:
+        'transform 0.5s cubic-bezier(0.5, 0, 0, 1), opacity 0.5s cubic-bezier(0.5, 0, 0, 1)',
+      pointerEvents: 'none',
+    }
+  }, [phase, isOrigin, originRect, originTargetWidth, sceneZoom])
 
   return (
-    <div className="video-card" data-grid-id={id}>
+    <div
+      ref={rootRef}
+      className={`video-card ${isOrigin ? 'video-card--origin' : ''}`}
+      data-grid-id={id}
+      onDoubleClick={handleDoubleClick}
+      style={transitionStyle ?? undefined}
+    >
       <mux-video
         ref={videoRef}
         playback-id={playbackId}
