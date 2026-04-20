@@ -5,7 +5,7 @@ import './VideoCard.css'
 // threshold: play when ≥30% of the video is visible in the viewport
 const VISIBILITY_THRESHOLD = 0.3
 
-export default function VideoCard({ id, playbackId }) {
+export default function VideoCard({ id, playbackId, name, date }) {
   const videoRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -65,6 +65,10 @@ export default function VideoCard({ id, playbackId }) {
         playsinline=""
         preload="metadata"
       />
+      <div className="video-card__info">
+        <span className="video-card__name">{name}</span>
+        <span className="video-card__date">{date}</span>
+      </div>
     </div>
   )
 }

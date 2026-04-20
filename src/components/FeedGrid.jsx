@@ -45,7 +45,13 @@ export default function FeedGrid() {
             style={{ width: columnWidth, gap: COL_GAP }}
           >
             {column.map((item) => (
-              <VideoCard key={item.id} id={item.id} playbackId={item.playbackId} />
+              <VideoCard
+                key={item.id}
+                id={item.id}
+                playbackId={item.playbackId}
+                name={item.name}
+                date={item.date}
+              />
             ))}
           </div>
         ))}
