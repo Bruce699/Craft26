@@ -5,7 +5,9 @@ import * as THREE from 'three'
 import './CoordinateScene.css'
 
 const AXIS_COLOR = '#4A4A4A'
-const AXIS_LENGTH = 4000
+// Must be >= viewport / minZoom on any reasonable screen so the axes
+// always extend beyond the visible area, including at max zoom-out.
+const AXIS_LENGTH = 100000
 const ENTER_DURATION = 500 // ms, matches centering phase
 const STAGGER_STEP = 20 // ms between each item
 

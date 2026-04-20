@@ -8,14 +8,15 @@ const COL_GAP = 8
 const NUM_COLS = 3
 const TOP_OFFSET = 110
 
-function useWindowWidth() {
+function useWindowWidth(enabled) {
   const [width, setWidth] = useState(() => document.documentElement.clientWidth)
 
   useEffect(() => {
+    if (!enabled) return
     const onResize = () => setWidth(document.documentElement.clientWidth)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [])
+  }, [enabled])
 
   return width
 }
@@ -28,7 +29,7 @@ export default function FeedGrid({
   sceneZoom = 1,
   onItemDoubleClick,
 }) {
-  const windowWidth = useWindowWidth()
+  const windowWidth = useWindowWidth(phase === 'feed')
 
   const columnWidth =
     (windowWidth - 2 * H_PADDING - (NUM_COLS - 1) * COL_GAP) / NUM_COLS

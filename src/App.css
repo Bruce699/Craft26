@@ -9,7 +9,13 @@ body {
 body.is-dark,
 html:has(body.is-dark) {
   overflow: hidden;
-  height: 100%;
+}
+
+/* In dark mode we go fullscreen — release the reserved scrollbar gutter
+   so the coord scene canvas (position: fixed) can span the full viewport
+   and its axes align with the centered origin card. */
+html:has(body.is-dark) {
+  scrollbar-gutter: auto;
 }
 
 body.is-dark {
