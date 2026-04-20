@@ -81,7 +81,6 @@ class SAOPass extends Pass {
 			vertexShader: SAOShader.vertexShader,
 			uniforms: UniformsUtils.clone( SAOShader.uniforms )
 		} );
-		this.saoMaterial.extensions.derivatives = true;
 		this.saoMaterial.defines[ 'PERSPECTIVE_CAMERA' ] = this.camera.isPerspectiveCamera ? 1 : 0;
 		this.saoMaterial.uniforms[ 'tDepth' ].value = depthTexture;
 		this.saoMaterial.uniforms[ 'tNormal' ].value = this.normalRenderTarget.texture;
@@ -314,7 +313,6 @@ class SAOPass extends Pass {
 		this.blurIntermediateRenderTarget.dispose();
 		this.normalRenderTarget.dispose();
 
-		this.depthMaterial.dispose();
 		this.normalMaterial.dispose();
 		this.saoMaterial.dispose();
 		this.vBlurMaterial.dispose();
