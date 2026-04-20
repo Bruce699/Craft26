@@ -9,10 +9,10 @@ const NUM_COLS = 3
 const TOP_OFFSET = 110 // distance from top of page (px)
 
 function useWindowWidth() {
-  const [width, setWidth] = useState(() => window.innerWidth)
+  const [width, setWidth] = useState(() => document.documentElement.clientWidth)
 
   useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth)
+    const onResize = () => setWidth(document.documentElement.clientWidth)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -34,6 +34,7 @@ export default function FeedGrid() {
         paddingTop: TOP_OFFSET,
         paddingLeft: H_PADDING,
         paddingRight: H_PADDING,
+        paddingBottom: 100,
       }}
     >
       <div className="feed-grid__columns" style={{ gap: COL_GAP }}>

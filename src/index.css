@@ -4,6 +4,14 @@
   padding: 0;
 }
 
+html {
+  /* Always reserve space for the vertical scrollbar so layout width
+     doesn't shift (and columns don't get miscomputed) once content
+     becomes scrollable */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 body {
   background-color: #CDCDCD;
   min-height: 100vh;
