@@ -59,12 +59,14 @@ function Axes() {
   )
 }
 
-function ThumbnailBillboard({ url, position, width, delay }) {
+function ThumbnailBillboard({ url, position, width, delay, exiting }) {
   const [texture, setTexture] = useState(null)
   const [height, setHeight] = useState(width)
   const meshRef = useRef()
   const materialRef = useRef()
   const startRef = useRef(null)
+  const exitStartRef = useRef(null)
+  const exitFromRef = useRef({ scale: 1, opacity: 1 })
 
   useEffect(() => {
     let cancelled = false
@@ -91,6 +93,24 @@ function ThumbnailBillboard({ url, position, width, delay }) {
   useFrame((state) => {
     if (!meshRef.current || !materialRef.current) return
     const now = state.clock.elapsedTime * 1000
+
+    if (exiting) {
+      if (exitStartRef.current === null) {
+        exitStartRef.current = now
+        exitFromRef.current = {
+          scale: meshRef.current.scale.x || 0.0001,
+          opacity: materialRef.current.opacity ?? 1,
+        }
+      }
+      const elapsed = now - exitStartRef.current
+      const t = Math.min(1, elapsed / ENTER_DURATION)
+      const eased = ease(t)
+      const from = exitFromRef.current
+      meshRef.current.scale.setScalar(Math.max(0.0001, from.scale * (1 - eased)))
+      materialRef.current.opacity = from.opacity * (1 - eased)
+      return
+    }
+
     if (startRef.current === null) startRef.current = now + delay
     const elapsed = now - startRef.current
     if (elapsed <= 0) {
@@ -278,7 +298,7 @@ function AxisLabelDriver({ labelRefs }) {
   return null
 }
 
-export default function CoordinateScene({ points, originId, thumbnailWidth, onZoomChange }) {
+export default function CoordinateScene({ points, originId, thumbnailWidth, onZoomChange, exiting = false }) {
   const origin = points.find((p) => p.id === originId)
   const relative = useMemo(() => {
     if (!origin) return []
@@ -363,6 +383,7 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
             position={p.position}
             width={thumbnailWidth}
             delay={i * STAGGER_STEP}
+            exiting={exiting}
           />
         ))}
         <OrbitControls

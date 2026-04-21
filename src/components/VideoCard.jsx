@@ -84,7 +84,10 @@ export default function VideoCard({
   }, [isOrigin])
 
   const handleDoubleClick = () => {
-    if (phase !== 'feed' || !onDoubleClick) return
+    if (!onDoubleClick) return
+    // Allow double-click in feed (to enter) OR on the origin card while in
+    // the coordinate phase (to reverse back out).
+    if (phase !== 'feed' && !(phase === 'coordinate' && isOrigin)) return
     const rect = rootRef.current?.getBoundingClientRect()
     if (!rect) return
     onDoubleClick(id, rect)
@@ -109,6 +112,22 @@ export default function VideoCard({
       if (phase === 'exploding') {
         return {
           transform: `translate(${dx}px, ${dy}px) scale(1)`,
+          transition: 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)',
+          zIndex: 100,
+        }
+      }
+      if (phase === 'uncentering') {
+        // Reverse of `centering`: scale back up to 1 while staying at center.
+        return {
+          transform: `translate(${dx}px, ${dy}px) scale(1)`,
+          transition: 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)',
+          zIndex: 100,
+        }
+      }
+      if (phase === 'unexploding') {
+        // Reverse of `exploding`: translate back to original position.
+        return {
+          transform: 'translate(0px, 0px) scale(1)',
           transition: 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)',
           zIndex: 100,
         }
@@ -139,6 +158,17 @@ export default function VideoCard({
     const len = Math.hypot(vx, vy) || 1
     vx = (vx / len) * EXPLOSION_DISTANCE
     vy = (vy / len) * EXPLOSION_DISTANCE
+
+    if (phase === 'unexploding') {
+      // Reverse of `exploding`: translate back home, fade back in.
+      return {
+        transform: 'translate(0px, 0px)',
+        opacity: 1,
+        transition:
+          'transform 0.5s cubic-bezier(0.5, 0, 0, 1), opacity 0.5s cubic-bezier(0.5, 0, 0, 1)',
+        pointerEvents: 'none',
+      }
+    }
 
     return {
       transform: `translate(${vx}px, ${vy}px)`,

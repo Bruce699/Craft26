@@ -6,16 +6,22 @@ import { useCoordinatePoints } from './coordinate/useCoordinateData'
 import './App.css'
 
 // Transition phases:
-//   feed       → normal grid
-//   exploding  → non-origin items fade + fly outward; origin pauses + starts translating to center
-//   centering  → origin has completed translate; now scaling down
-//   coordinate → R3F scene mounted, origin locked at screen center
+//   feed         → normal grid
+//   exploding    → non-origin items fade + fly outward; origin pauses + starts translating to center
+//   centering    → origin has completed translate; now scaling down
+//   coordinate   → R3F scene mounted, origin locked at screen center
+//   uncentering  → (reverse of centering) origin scales back up; scene thumbnails fade out
+//   unexploding  → (reverse of exploding) origin translates back; non-origin items fly in + fade in
 const PHASE_DURATIONS = {
-  exploding: 500,   // ms — matches origin translate + non-origin explosion
-  centering: 500,   // ms — origin scale-down
+  exploding: 500,
+  centering: 500,
+  uncentering: 500,
+  unexploding: 500,
 }
 
 const ORIGIN_WIDTH_RATIO = 120 / 1200
+
+const DARK_PHASES = new Set(['exploding', 'centering', 'coordinate', 'uncentering'])
 
 export default function App() {
   const [phase, setPhase] = useState('feed')
@@ -36,11 +42,17 @@ export default function App() {
   }, [])
 
   const handleItemDoubleClick = useCallback((id, rect) => {
-    if (phase !== 'feed') return
-    setOriginId(id)
-    setOriginRect(rect)
-    setPhase('exploding')
-  }, [phase])
+    if (phase === 'feed') {
+      setOriginId(id)
+      setOriginRect(rect)
+      setPhase('exploding')
+      return
+    }
+    // Origin double-clicked in coordinate phase → reverse transition.
+    if (phase === 'coordinate' && id === originId) {
+      setPhase('uncentering')
+    }
+  }, [phase, originId])
 
   // Phase timing. We advance phase via setTimeout so CSS transitions can run
   // in sequence without fighting each other.
@@ -53,15 +65,32 @@ export default function App() {
       const t = setTimeout(() => setPhase('coordinate'), PHASE_DURATIONS.centering)
       return () => clearTimeout(t)
     }
+    if (phase === 'uncentering') {
+      const t = setTimeout(() => setPhase('unexploding'), PHASE_DURATIONS.uncentering)
+      return () => clearTimeout(t)
+    }
+    if (phase === 'unexploding') {
+      const t = setTimeout(() => {
+        setPhase('feed')
+        setOriginId(null)
+        setOriginRect(null)
+        setSceneZoom(1)
+      }, PHASE_DURATIONS.unexploding)
+      return () => clearTimeout(t)
+    }
   }, [phase])
 
-  // Dark background once transition starts. Done via body class so it
-  // covers the whole viewport and fades smoothly alongside the scene.
+  // Dark background while in the 3D coordinate mode (including reverse enter).
+  // Removed on `unexploding` so the bg fades back to normal alongside items
+  // flying back in (body has a 0.6s bg-color transition).
   useEffect(() => {
-    document.body.classList.toggle('is-dark', phase !== 'feed')
+    document.body.classList.toggle('is-dark', DARK_PHASES.has(phase))
   }, [phase])
 
-  const showScene = phase === 'centering' || phase === 'coordinate'
+  // Scene is mounted for forward centering/coordinate AND reverse uncentering
+  // so thumbnails can fade out. Unmounts once we reach `unexploding`.
+  const showScene =
+    phase === 'centering' || phase === 'coordinate' || phase === 'uncentering'
 
   return (
     <>
@@ -80,6 +109,7 @@ export default function App() {
           originId={originId}
           thumbnailWidth={originTargetWidth}
           onZoomChange={setSceneZoom}
+          exiting={phase === 'uncentering'}
         />
       )}
     </>
