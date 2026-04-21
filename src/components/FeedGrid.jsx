@@ -33,6 +33,9 @@ export default function FeedGrid({
   originTargetWidth = 0,
   sceneZoom = 1,
   onItemDoubleClick,
+  mobileFocus = null,
+  onMobileFocus,
+  onExitMobileFocus,
 }) {
   const windowWidth = useWindowWidth(phase === 'feed')
 
@@ -75,6 +78,12 @@ export default function FeedGrid({
                 originTargetWidth={originTargetWidth}
                 sceneZoom={sceneZoom}
                 onDoubleClick={onItemDoubleClick}
+                isMobile={isMobile}
+                isMobileFocused={mobileFocus?.id === item.id}
+                mobileFocusRect={mobileFocus?.id === item.id ? mobileFocus.rect : null}
+                mobileFocusExiting={mobileFocus?.exiting === true}
+                onMobileFocus={onMobileFocus}
+                onExitMobileFocus={onExitMobileFocus}
               />
             ))}
           </div>

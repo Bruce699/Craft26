@@ -23,11 +23,25 @@ const ORIGIN_WIDTH_RATIO = 120 / 1200
 
 const DARK_PHASES = new Set(['exploding', 'centering', 'coordinate', 'uncentering'])
 
+const MOBILE_BREAKPOINT = 480
+const MOBILE_FOCUS_EXIT_MS = 300
+
 export default function App() {
   const [phase, setPhase] = useState('feed')
   const [originId, setOriginId] = useState(null)
   const [originRect, setOriginRect] = useState(null)
   const [sceneZoom, setSceneZoom] = useState(1)
+  // { id, rect, exiting } — mobile focus overlay (tap a card to enlarge it)
+  const [mobileFocus, setMobileFocus] = useState(null)
+  const [isMobile, setIsMobile] = useState(
+    () => document.documentElement.clientWidth <= MOBILE_BREAKPOINT,
+  )
+  useEffect(() => {
+    const onResize = () =>
+      setIsMobile(document.documentElement.clientWidth <= MOBILE_BREAKPOINT)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const points = useCoordinatePoints()
 
@@ -53,6 +67,32 @@ export default function App() {
       setPhase('uncentering')
     }
   }, [phase, originId])
+
+  const handleMobileFocus = useCallback((id, rect) => {
+    if (!isMobile || phase !== 'feed') return
+    setMobileFocus({ id, rect, exiting: false })
+  }, [isMobile, phase])
+
+  const exitMobileFocus = useCallback(() => {
+    setMobileFocus((f) => (f && !f.exiting ? { ...f, exiting: true } : f))
+  }, [])
+
+  useEffect(() => {
+    if (!mobileFocus || !mobileFocus.exiting) return
+    const t = setTimeout(() => setMobileFocus(null), MOBILE_FOCUS_EXIT_MS)
+    return () => clearTimeout(t)
+  }, [mobileFocus])
+
+  useEffect(() => {
+    document.body.classList.toggle(
+      'is-mobile-focus',
+      !!mobileFocus && !mobileFocus.exiting,
+    )
+    document.body.classList.toggle(
+      'is-mobile-focus-exiting',
+      !!mobileFocus && mobileFocus.exiting,
+    )
+  }, [mobileFocus])
 
   // Phase timing. We advance phase via setTimeout so CSS transitions can run
   // in sequence without fighting each other.
@@ -102,6 +142,10 @@ export default function App() {
         originTargetWidth={originTargetWidth}
         sceneZoom={sceneZoom}
         onItemDoubleClick={handleItemDoubleClick}
+        isMobile={isMobile}
+        mobileFocus={mobileFocus}
+        onMobileFocus={handleMobileFocus}
+        onExitMobileFocus={exitMobileFocus}
       />
       {showScene && (
         <CoordinateScene

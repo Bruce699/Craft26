@@ -16,6 +16,25 @@
   font-weight: 350;
   font-size: 14px;
   line-height: 16px;
+  transition:
+    opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
+    filter 0.3s cubic-bezier(0.5, 0, 0, 1);
+}
+
+body.is-mobile-focus .nav-pill,
+body.is-mobile-focus-exiting .nav-pill {
+  pointer-events: none;
+}
+
+body.is-mobile-focus .nav-pill {
+  opacity: 0.5;
+  filter: blur(40px);
+}
+
+body.is-mobile-focus-exiting .nav-pill {
+  transition:
+    opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
+    filter 0.3s cubic-bezier(0.5, 0, 0, 1);
 }
 
 .nav-pill__link {

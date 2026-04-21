@@ -5,6 +5,9 @@ import './VideoCard.css'
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
 
+const MOBILE_FOCUS_GAP = 4
+const MOBILE_SWIPE_THRESHOLD = 30
+
 export default function VideoCard({
   id,
   playbackId,
@@ -16,6 +19,12 @@ export default function VideoCard({
   originTargetWidth = 0,
   sceneZoom = 1,
   onDoubleClick,
+  isMobile = false,
+  isMobileFocused = false,
+  mobileFocusRect = null,
+  mobileFocusExiting = false,
+  onMobileFocus,
+  onExitMobileFocus,
 }) {
   const videoRef = useRef(null)
   const rootRef = useRef(null)
@@ -95,6 +104,7 @@ export default function VideoCard({
   }, [isOrigin])
 
   const handleDoubleClick = () => {
+    if (isMobile) return
     if (!onDoubleClick) return
     // Allow double-click in feed (to enter) OR on the origin card while in
     // the coordinate phase (to reverse back out).
@@ -104,10 +114,93 @@ export default function VideoCard({
     onDoubleClick(id, rect)
   }
 
+  const handleClick = () => {
+    if (!isMobile || phase !== 'feed') return
+    if (isMobileFocused) return
+    if (!onMobileFocus) return
+    const rect = rootRef.current?.getBoundingClientRect()
+    if (!rect) return
+    onMobileFocus(id, rect)
+  }
+
+  // When focused on mobile: any click outside exits; any swipe on the card exits.
+  useEffect(() => {
+    if (!isMobileFocused || mobileFocusExiting) return
+    const el = rootRef.current
+    if (!el) return
+
+    const onDocClick = (e) => {
+      if (!el.contains(e.target)) onExitMobileFocus?.()
+    }
+    // Defer so the tap that opened focus doesn't immediately close it.
+    const rafId = requestAnimationFrame(() => {
+      document.addEventListener('click', onDocClick, true)
+      document.addEventListener('touchstart', onDocClick, { capture: true, passive: true })
+    })
+
+    let startX = 0
+    let startY = 0
+    let swiped = false
+    const onTouchStart = (e) => {
+      swiped = false
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
+    }
+    const onTouchMove = (e) => {
+      if (swiped) return
+      const t = e.touches[0]
+      if (
+        Math.hypot(t.clientX - startX, t.clientY - startY) > MOBILE_SWIPE_THRESHOLD
+      ) {
+        swiped = true
+        onExitMobileFocus?.()
+      }
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: true })
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      document.removeEventListener('click', onDocClick, true)
+      document.removeEventListener('touchstart', onDocClick, { capture: true })
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [isMobileFocused, mobileFocusExiting, onExitMobileFocus])
+
   // Compute the transform for this card based on phase + origin rect.
   // For non-origin cards: fly outward from origin center and fade.
   // For the origin card: translate to viewport center, then scale down.
   const transitionStyle = useMemo(() => {
+    // Mobile focus overlay — takes precedence over feed phase.
+    if (isMobileFocused && mobileFocusRect) {
+      const r = mobileFocusRect
+      const cx = r.left + r.width / 2
+      const cy = r.top + r.height / 2
+      const dx = window.innerWidth / 2 - cx
+      const dy = window.innerHeight / 2 - cy
+      const targetWidth = window.innerWidth - MOBILE_FOCUS_GAP * 2
+      const scale = targetWidth / r.width
+      const commonTransition =
+        'transform 0.3s cubic-bezier(0.5, 0, 0, 1), border-radius 0.3s cubic-bezier(0.5, 0, 0, 1)'
+      if (mobileFocusExiting) {
+        return {
+          transform: 'translate(0px, 0px) scale(1)',
+          borderRadius: '8px',
+          transition: commonTransition,
+          zIndex: 100,
+        }
+      }
+      return {
+        transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+        // Divide by scale so the visual corner is ~4px after the transform.
+        borderRadius: `${4 / scale}px`,
+        transition: commonTransition,
+        zIndex: 100,
+      }
+    }
+
     if (phase === 'feed' || !originRect) return null
 
     const selfRect = originalRectRef.current
@@ -188,13 +281,23 @@ export default function VideoCard({
         'transform 0.5s cubic-bezier(0.5, 0, 0, 1), opacity 0.5s cubic-bezier(0.5, 0, 0, 1)',
       pointerEvents: 'none',
     }
-  }, [phase, isOrigin, originRect, originTargetWidth, sceneZoom])
+  }, [
+    phase,
+    isOrigin,
+    originRect,
+    originTargetWidth,
+    sceneZoom,
+    isMobileFocused,
+    mobileFocusRect,
+    mobileFocusExiting,
+  ])
 
   return (
     <div
       ref={rootRef}
-      className={`video-card ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''}`}
+      className={`video-card ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''}`}
       data-grid-id={id}
+      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       style={transitionStyle ?? undefined}
     >
