@@ -21,6 +21,17 @@ export default function VideoCard({
   const rootRef = useRef(null)
   const originalRectRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
+  const [posterLoaded, setPosterLoaded] = useState(false)
+
+  // Reveal the card (fade + slight upward motion) only after the poster img
+  // below has actually rendered. Double rAF guarantees the hidden initial
+  // state is painted once before the class flip, so cached posters don't
+  // "pop in" without a transition.
+  const handlePosterLoad = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPosterLoaded(true))
+    })
+  }
 
   // Snapshot the card's viewport rect while it's still in normal feed layout.
   // Once transforms kick in, getBoundingClientRect would return the *moved*
@@ -182,15 +193,21 @@ export default function VideoCard({
   return (
     <div
       ref={rootRef}
-      className={`video-card ${isOrigin ? 'video-card--origin' : ''}`}
+      className={`video-card ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''}`}
       data-grid-id={id}
       onDoubleClick={handleDoubleClick}
       style={transitionStyle ?? undefined}
     >
+      <img
+        className="video-card__poster"
+        src={`/thumbnails/${id}.jpg`}
+        alt=""
+        onLoad={handlePosterLoad}
+        onError={handlePosterLoad}
+      />
       <mux-video
         ref={videoRef}
         playback-id={playbackId}
-        poster={`/thumbnails/${id}.jpg`}
         muted
         loop
         playsinline=""
