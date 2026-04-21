@@ -135,6 +135,149 @@ function ZoomBroadcaster({ onZoomChange }) {
   return null
 }
 
+// Find where the line through (ox,oy) in direction (ux,uy) exits screen bounds.
+// Returns smallest-positive-t and smallest-negative-|t| intersections.
+function findAxisExits(ox, oy, ux, uy, w, h) {
+  const eps = 1e-6
+  const candidates = []
+  if (Math.abs(ux) > eps) {
+    const tL = -ox / ux
+    const yL = oy + tL * uy
+    if (yL >= 0 && yL <= h) candidates.push({ t: tL, x: 0, y: yL })
+    const tR = (w - ox) / ux
+    const yR = oy + tR * uy
+    if (yR >= 0 && yR <= h) candidates.push({ t: tR, x: w, y: yR })
+  }
+  if (Math.abs(uy) > eps) {
+    const tT = -oy / uy
+    const xT = ox + tT * ux
+    if (xT >= 0 && xT <= w) candidates.push({ t: tT, x: xT, y: 0 })
+    const tB = (h - oy) / uy
+    const xB = ox + tB * ux
+    if (xB >= 0 && xB <= w) candidates.push({ t: tB, x: xB, y: h })
+  }
+  const pos = candidates.filter((c) => c.t > 0).sort((a, b) => a.t - b.t)[0]
+  const neg = candidates.filter((c) => c.t < 0).sort((a, b) => b.t - a.t)[0]
+  return { pos, neg }
+}
+
+function AxisLabelDriver({ labelRefs }) {
+  const { camera, size } = useThree()
+  const p0 = useMemo(() => new THREE.Vector3(), [])
+  const p1 = useMemo(() => new THREE.Vector3(), [])
+
+  useFrame(() => {
+    const w = size.width
+    const h = size.height
+    if (!w || !h) return
+
+    // Project world origin to screen
+    p0.set(0, 0, 0).project(camera)
+    const ox = (p0.x + 1) * 0.5 * w
+    const oy = (1 - p0.y) * 0.5 * h
+
+    // Helper to project any world vector (from origin) to 2D screen direction
+    const projectDir = (wx, wy, wz) => {
+      p1.set(wx, wy, wz).project(camera)
+      const sx = (p1.x + 1) * 0.5 * w - ox
+      const sy = (1 - p1.y) * 0.5 * h - oy
+      const len = Math.hypot(sx, sy) || 1
+      return { x: sx / len, y: sy / len }
+    }
+
+    const xDir = projectDir(1, 0, 0)
+    const yDir = projectDir(0, 1, 0)
+
+    const setLabel = (ref, data) => {
+      if (!ref.current) return
+      if (!data) {
+        ref.current.style.opacity = '0'
+        return
+      }
+      ref.current.style.opacity = '1'
+      ref.current.style.transform =
+        `translate(${data.x}px, ${data.y}px) rotate(${data.angle}rad) ${data.pivot}`
+    }
+
+    // -------- X axis labels --------
+    const xExits = findAxisExits(ox, oy, xDir.x, xDir.y, w, h)
+    const xAngle = Math.atan2(xDir.y, xDir.x)
+    // Perpendicular toward screen top (smaller y)
+    const xPerpA = { x: -xDir.y, y: xDir.x }
+    const xPerpB = { x: xDir.y, y: -xDir.x }
+    const xPerpUp = xPerpA.y < xPerpB.y ? xPerpA : xPerpB
+
+    let xMinus = null
+    if (xExits.neg) {
+      const bx = xExits.neg.x + 8 * xDir.x
+      const by = xExits.neg.y + 8 * xDir.y
+      xMinus = {
+        x: bx + 2 * xPerpUp.x,
+        y: by + 2 * xPerpUp.y,
+        angle: xAngle,
+        pivot: 'translate(0, -100%)',
+      }
+    }
+
+    let xPlus = null
+    if (xExits.pos) {
+      const bx = xExits.pos.x - 8 * xDir.x
+      const by = xExits.pos.y - 8 * xDir.y
+      xPlus = {
+        x: bx + 2 * xPerpUp.x,
+        y: by + 2 * xPerpUp.y,
+        angle: xAngle,
+        pivot: 'translate(-100%, -100%)',
+      }
+    }
+
+    setLabel(labelRefs.xMinus, xMinus)
+    setLabel(labelRefs.xPlus, xPlus)
+
+    // -------- Y axis labels --------
+    const yAngle = Math.atan2(yDir.y, yDir.x)
+    const yPerpA = { x: -yDir.y, y: yDir.x }
+    const yPerpB = { x: yDir.y, y: -yDir.x }
+    const yPerpRight = yPerpA.x > yPerpB.x ? yPerpA : yPerpB
+    const yPerpLeft = yPerpA.x < yPerpB.x ? yPerpA : yPerpB
+
+    let yPlus = null
+    let yMinus = null
+    if (Math.abs(yDir.y) > 1e-6) {
+      const topY = 16
+      const bottomY = h - 16
+      const tTop = (topY - oy) / yDir.y
+      const tBottom = (bottomY - oy) / yDir.y
+      const xAtTop = ox + tTop * yDir.x
+      const xAtBottom = ox + tBottom * yDir.x
+
+      // Procedural at + end → whichever target has t > 0
+      const plusTargetY = tTop >= 0 ? topY : bottomY
+      const plusX = tTop >= 0 ? xAtTop : xAtBottom
+      const minusTargetY = tTop >= 0 ? bottomY : topY
+      const minusX = tTop >= 0 ? xAtBottom : xAtTop
+
+      yPlus = {
+        x: plusX + 2 * yPerpRight.x,
+        y: plusTargetY + 2 * yPerpRight.y,
+        angle: yAngle,
+        pivot: 'translate(-100%, 0)',
+      }
+      yMinus = {
+        x: minusX + 2 * yPerpLeft.x,
+        y: minusTargetY + 2 * yPerpLeft.y,
+        angle: yAngle,
+        pivot: 'translate(0, -100%)',
+      }
+    }
+
+    setLabel(labelRefs.yPlus, yPlus)
+    setLabel(labelRefs.yMinus, yMinus)
+  })
+
+  return null
+}
+
 export default function CoordinateScene({ points, originId, thumbnailWidth, onZoomChange }) {
   const origin = points.find((p) => p.id === originId)
   const relative = useMemo(() => {
@@ -181,6 +324,15 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
     [size.w, size.h],
   )
 
+  const xMinusRef = useRef()
+  const xPlusRef = useRef()
+  const yPlusRef = useRef()
+  const yMinusRef = useRef()
+  const labelRefs = useMemo(
+    () => ({ xMinus: xMinusRef, xPlus: xPlusRef, yPlus: yPlusRef, yMinus: yMinusRef }),
+    [],
+  )
+
   return (
     <div className="coordinate-scene">
       <Canvas
@@ -223,7 +375,12 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
           makeDefault
         />
         <ZoomBroadcaster onZoomChange={onZoomChange} />
+        <AxisLabelDriver labelRefs={labelRefs} />
       </Canvas>
+      <div ref={xMinusRef} className="axis-label">Build Time -</div>
+      <div ref={xPlusRef} className="axis-label">Build Time +</div>
+      <div ref={yPlusRef} className="axis-label">Procedural</div>
+      <div ref={yMinusRef} className="axis-label">Keyframed</div>
     </div>
   )
 }

@@ -15,7 +15,7 @@ const PHASE_DURATIONS = {
   centering: 500,   // ms — origin scale-down
 }
 
-const ORIGIN_WIDTH_RATIO = 80 / 1200
+const ORIGIN_WIDTH_RATIO = 120 / 1200
 
 export default function App() {
   const [phase, setPhase] = useState('feed')
