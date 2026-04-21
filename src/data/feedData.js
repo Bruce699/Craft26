@@ -40,3 +40,14 @@ export const feedColumns = [
     { id: 'c3r9', playbackId: 'Ux1Kjx4W21sTiZ9G3DHpHJ8EvvYOXouES02qxbHR1sbA', name: 'Smart Calendar', date: 'April 2026' },
   ],
 ]
+
+// Mobile layout: 2 columns (MC1, MC2). Each entry references an item in
+// feedColumns by its cxry id so there's a single source of truth for content.
+const itemById = new Map(feedColumns.flat().map((item) => [item.id, item]))
+const mobileOrder = [
+  // MC1 top → bottom
+  ['c2r2', 'c1r2', 'c1r1', 'c3r3', 'c3r6', 'c1r3', 'c2r6', 'c3r4', 'c1r5', 'c1r6', 'c3r7', 'c2r8', 'c1r9', 'c3r9'],
+  // MC2 top → bottom
+  ['c2r1', 'c3r1', 'c1r4', 'c3r2', 'c2r4', 'c2r3', 'c3r5', 'c1r7', 'c2r7', 'c2r5', 'c3r8', 'c1r8', 'c2r9'],
+]
+export const mobileFeedColumns = mobileOrder.map((ids) => ids.map((id) => itemById.get(id)))
