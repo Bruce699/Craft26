@@ -21,10 +21,10 @@ export const feedColumns = [
     { id: 'c2r2', playbackId: '2BPUc02BHPCilYGFASb6QuU4E9F02wiMefxaFBENtixcc', name: 'Self-disciplined Agent', date: 'February 2026' },
     { id: 'c2r3', playbackId: 'YjDjAU7P3KanZw2kA5pAF02IaQuxYiHierePucxTJsHU', name: 'Contextual Search', date: 'September 2025' },
     { id: 'c2r4', playbackId: 'lkOFeA9rDgNGQdyzB77FWIftopmsbhKO00SOcLAnsP00c', name: 'Card Swipe Interaction', date: 'March 2026' },
-    { id: 'c2r5', playbackId: 'jIrloIxCi1ToIGx4u9Yc7Zp1RjgzXba1mwnIJKDsNoc', name: 'Follow-up Thread', date: 'September 2026' },
-    { id: 'c2r6', playbackId: 'Wb2vxWaCFy6SYXzVW2rbe1bKSW00WgRqjj7wpjFysVOU', name: 'Poker Loading', date: 'August 2026' },
-    { id: 'c2r7', playbackId: '3JOGAkFHWi02xCaKKOK3LpeIDhvqIaMr8yYgrINmZakI', name: 'Bookmark Info Cards', date: 'September 2026' },
-    { id: 'c2r8', playbackId: 'FA1OaJpIvpOcx1Q8y9apfRi8wDU011c302fk8XU6aParA', name: 'iOS Exit', date: 'August 2026' },
+    { id: 'c2r5', playbackId: 'jIrloIxCi1ToIGx4u9Yc7Zp1RjgzXba1mwnIJKDsNoc', name: 'Follow-up Thread', date: 'September 2025' },
+    { id: 'c2r6', playbackId: 'Wb2vxWaCFy6SYXzVW2rbe1bKSW00WgRqjj7wpjFysVOU', name: 'Poker Loading', date: 'August 2025' },
+    { id: 'c2r7', playbackId: '3JOGAkFHWi02xCaKKOK3LpeIDhvqIaMr8yYgrINmZakI', name: 'Bookmark Info Cards', date: 'September 2025' },
+    { id: 'c2r8', playbackId: 'FA1OaJpIvpOcx1Q8y9apfRi8wDU011c302fk8XU6aParA', name: 'iOS Exit', date: 'August 2025' },
     { id: 'c2r9', playbackId: '01nPlGYjmGSakKAoHKgv5uxzD018RRfJGhCXjk9jMwmSo', name: 'Gaze Tracking in VR', date: 'March 2025' },
   ],
   // Column 3
@@ -36,7 +36,7 @@ export const feedColumns = [
     { id: 'c3r5', playbackId: 'lD49gZ0262HUDDAmnMsdXMp95KFycobVzobvcV007V2fU', name: 'Branded Animation', date: 'January 2026' },
     { id: 'c3r6', playbackId: '8oFkLXCFhx02cLJ2YoSN3aQIsocSEDx501268nxszGbWY', name: 'Co-build Workflow', date: 'February 2026' },
     { id: 'c3r7', playbackId: 'wrCYLOM6M7rmQ00qMwyEpI4F33OJ3r4p7Sh02ukUaWwJg', name: 'Adaptive Workflow', date: 'April 2026' },
-    { id: 'c3r8', playbackId: 'FoU3d02dHic602T1vNd9kjLTGnHbUpW8f9OX2FO029oS008', name: 'Meet Icebreaker', date: 'July 2026' },
+    { id: 'c3r8', playbackId: 'FoU3d02dHic602T1vNd9kjLTGnHbUpW8f9OX2FO029oS008', name: 'Meet Icebreaker', date: 'July 2025' },
     { id: 'c3r9', playbackId: 'Ux1Kjx4W21sTiZ9G3DHpHJ8EvvYOXouES02qxbHR1sbA', name: 'Smart Calendar', date: 'April 2026' },
   ],
 ]
