@@ -31,6 +31,7 @@ export default function VideoCard({
 }) {
   const videoRef = useRef(null)
   const rootRef = useRef(null)
+  const cardRef = useRef(null)
   const originalRectRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
   const [posterLoaded, setPosterLoaded] = useState(false)
@@ -62,8 +63,9 @@ export default function VideoCard({
   // Once transforms kick in, getBoundingClientRect would return the *moved*
   // position, so we stop updating the snapshot once we leave the feed phase.
   useEffect(() => {
-    if (phase === 'feed' && !mobileFocusActive && rootRef.current) {
-      originalRectRef.current = rootRef.current.getBoundingClientRect()
+    const snapshotTarget = cardRef.current ?? rootRef.current
+    if (phase === 'feed' && !mobileFocusActive && snapshotTarget) {
+      originalRectRef.current = snapshotTarget.getBoundingClientRect()
     }
   })
 
@@ -183,15 +185,15 @@ export default function VideoCard({
     if (!isMobile || phase !== 'feed') return
     if (isMobileFocused) return
     if (!onMobileFocus) return
-    const rect = rootRef.current?.getBoundingClientRect()
+    const rect = cardRef.current?.getBoundingClientRect()
     if (!rect) return
     onMobileFocus(id, rect)
   }
 
   // When focused on mobile: any click outside exits.
   useEffect(() => {
-    if (!isMobileFocused || mobileFocusExiting) return
-    const el = rootRef.current
+    if (phase !== 'feed' || !isMobileFocused || mobileFocusExiting) return
+    const el = cardRef.current
     if (!el) return
 
     const onDocClick = (e) => {
@@ -208,25 +210,33 @@ export default function VideoCard({
       document.removeEventListener('click', onDocClick, true)
       document.removeEventListener('touchstart', onDocClick, { capture: true })
     }
-  }, [isMobileFocused, mobileFocusExiting, onExitMobileFocus])
+  }, [phase, isMobileFocused, mobileFocusExiting, onExitMobileFocus])
 
   // Compute the transform for this card based on phase + origin rect.
   // For non-origin cards: fly outward from origin center and fade.
   // For the origin card: translate to viewport center, then scale down.
   const transitionStyle = useMemo(() => {
     // Mobile focus overlay — takes precedence over feed phase.
-    if (isMobileFocused || isMobileFocusPrevious) {
-      const focusRect = originalRectRef.current ?? mobileFocusRect
+    if (phase === 'feed' && (isMobileFocused || isMobileFocusPrevious)) {
+      const focusRect = mobileFocusRect ?? originalRectRef.current
       if (!focusRect) return null
       const { dx, dy, scale } = getMobileFocusTransform(focusRect)
       const commonTransition =
         'transform 0.4s cubic-bezier(0.5, 0, 0, 1), border-radius 0.4s cubic-bezier(0.5, 0, 0, 1)'
       const centeredTransform = `translate(${dx}px, ${dy}px) scale(${scale})`
+      const fixedFrame = {
+        position: 'fixed',
+        top: `${focusRect.top}px`,
+        left: `${focusRect.left}px`,
+        width: `${focusRect.width}px`,
+        height: `${focusRect.height}px`,
+      }
 
       if (isMobileFocusPrevious) {
         const outgoingTransform =
           `translate(${dx - mobileFocusDirection * window.innerWidth}px, ${dy}px) scale(${scale})`
         return {
+          ...fixedFrame,
           transform: mobileFocusPhase === 'anim' ? outgoingTransform : centeredTransform,
           borderRadius: `${4 / scale}px`,
           transition: mobileFocusPhase === 'anim' ? commonTransition : 'none',
@@ -237,6 +247,7 @@ export default function VideoCard({
 
       if (mobileFocusExiting) {
         return {
+          ...fixedFrame,
           transform: 'translate(0px, 0px) scale(1)',
           borderRadius: '8px',
           transition: commonTransition,
@@ -245,6 +256,7 @@ export default function VideoCard({
       }
       if (mobileFocusPhase === 'prep') {
         return {
+          ...fixedFrame,
           transform:
             `translate(${dx + mobileFocusDirection * window.innerWidth}px, ${dy}px) scale(${scale})`,
           borderRadius: `${4 / scale}px`,
@@ -253,6 +265,7 @@ export default function VideoCard({
         }
       }
       return {
+        ...fixedFrame,
         transform: centeredTransform,
         // Divide by scale so the visual corner is ~4px after the transform.
         borderRadius: `${4 / scale}px`,
@@ -355,6 +368,15 @@ export default function VideoCard({
     mobileFocusExiting,
   ])
 
+  const shellStyle = useMemo(() => {
+    if (phase !== 'feed' || !(isMobileFocused || isMobileFocusPrevious)) return undefined
+    const focusRect = mobileFocusRect ?? originalRectRef.current
+    if (!focusRect) return undefined
+    return {
+      height: `${focusRect.height}px`,
+    }
+  }, [phase, isMobileFocused, isMobileFocusPrevious, mobileFocusRect])
+
   const cardStyle = {
     ...(transitionStyle ?? {}),
     ...(isVideoSizedCard && videoAspectRatio
@@ -365,30 +387,36 @@ export default function VideoCard({
   return (
     <div
       ref={rootRef}
-      className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''}`}
+      className="video-card-shell"
       data-grid-id={id}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}
+      style={shellStyle}
     >
-      <img
-        className="video-card__poster"
-        src={`/thumbnails/${id}.jpg`}
-        alt=""
-        onLoad={handlePosterLoad}
-        onError={handlePosterLoad}
-      />
-      <mux-video
-        ref={videoRef}
-        playback-id={playbackId}
-        muted
-        loop
-        playsinline=""
-        preload={isMobile && mobileFocusActive && isMobileFocused ? 'auto' : 'metadata'}
-      />
-      <div className="video-card__info">
-        <span className="video-card__name">{name}</span>
-        <span className="video-card__date">{date}</span>
+      <div
+        ref={cardRef}
+        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''}`}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}
+      >
+        <img
+          className="video-card__poster"
+          src={`/thumbnails/${id}.jpg`}
+          alt=""
+          onLoad={handlePosterLoad}
+          onError={handlePosterLoad}
+        />
+        <mux-video
+          ref={videoRef}
+          playback-id={playbackId}
+          muted
+          loop
+          playsinline=""
+          preload={isMobile && mobileFocusActive && isMobileFocused ? 'auto' : 'metadata'}
+        />
+        <div className="video-card__info">
+          <span className="video-card__name">{name}</span>
+          <span className="video-card__date">{date}</span>
+        </div>
       </div>
     </div>
   )

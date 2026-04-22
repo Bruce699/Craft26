@@ -15,7 +15,6 @@ body.is-mobile-focus,
 body.is-mobile-focus-exiting,
 html:has(body.is-mobile-focus),
 html:has(body.is-mobile-focus-exiting) {
-  overflow: hidden;
   overscroll-behavior: none;
 }
 

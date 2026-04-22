@@ -74,6 +74,7 @@ export default function App() {
     setMobileFocus({
       id,
       rect,
+      scrollY: window.scrollY,
       exiting: false,
       previousId: null,
       direction: 0,
@@ -109,16 +110,18 @@ export default function App() {
     return () => clearTimeout(t)
   }, [mobileFocus])
 
+  const mobileFocusVisible = phase === 'feed' && !!mobileFocus
+
   useEffect(() => {
     document.body.classList.toggle(
       'is-mobile-focus',
-      !!mobileFocus && !mobileFocus.exiting,
+      mobileFocusVisible && !mobileFocus.exiting,
     )
     document.body.classList.toggle(
       'is-mobile-focus-exiting',
-      !!mobileFocus && mobileFocus.exiting,
+      mobileFocusVisible && mobileFocus.exiting,
     )
-  }, [mobileFocus])
+  }, [mobileFocus, mobileFocusVisible])
 
   useEffect(() => {
     if (!isMobile) return
@@ -127,29 +130,53 @@ export default function App() {
 
     const scrollY = window.scrollY
     mobileFocusScrollLockRef.current = scrollY
+    let restoreRaf = 0
 
-    const { style } = document.body
-    const prevPosition = style.position
-    const prevTop = style.top
-    const prevLeft = style.left
-    const prevRight = style.right
-    const prevWidth = style.width
-    const prevOverflow = style.overflow
+    const restoreScroll = () => {
+      if (window.scrollY !== mobileFocusScrollLockRef.current) {
+        window.scrollTo(0, mobileFocusScrollLockRef.current)
+      }
+    }
 
-    style.position = 'fixed'
-    style.top = `-${scrollY}px`
-    style.left = '0'
-    style.right = '0'
-    style.width = '100%'
-    style.overflow = 'hidden'
+    const handleTouchMove = (event) => {
+      event.preventDefault()
+    }
+
+    const handleWheel = (event) => {
+      event.preventDefault()
+    }
+
+    const handleKeyDown = (event) => {
+      if (
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'PageUp' ||
+        event.key === 'PageDown' ||
+        event.key === 'Home' ||
+        event.key === 'End' ||
+        event.key === ' ' ||
+        event.key === 'Spacebar'
+      ) {
+        event.preventDefault()
+      }
+    }
+
+    const handleScroll = () => {
+      cancelAnimationFrame(restoreRaf)
+      restoreRaf = requestAnimationFrame(restoreScroll)
+    }
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('wheel', handleWheel, { passive: false })
+    document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleScroll, { passive: true })
 
     return () => {
-      style.position = prevPosition
-      style.top = prevTop
-      style.left = prevLeft
-      style.right = prevRight
-      style.width = prevWidth
-      style.overflow = prevOverflow
+      cancelAnimationFrame(restoreRaf)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('wheel', handleWheel)
+      document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleScroll)
       window.scrollTo(0, mobileFocusScrollLockRef.current)
     }
   }, [isMobile, mobileFocus])
