@@ -79,8 +79,12 @@ export default function FeedGrid({
                 sceneZoom={sceneZoom}
                 onDoubleClick={onItemDoubleClick}
                 isMobile={isMobile}
+                mobileFocusActive={!!mobileFocus && !mobileFocus.exiting}
                 isMobileFocused={mobileFocus?.id === item.id}
+                isMobileFocusPrevious={mobileFocus?.previousId === item.id}
                 mobileFocusRect={mobileFocus?.id === item.id ? mobileFocus.rect : null}
+                mobileFocusPhase={mobileFocus?.phase ?? null}
+                mobileFocusDirection={mobileFocus?.direction ?? 0}
                 mobileFocusExiting={mobileFocus?.exiting === true}
                 onMobileFocus={onMobileFocus}
                 onExitMobileFocus={onExitMobileFocus}

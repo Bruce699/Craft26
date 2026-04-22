@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import FeedGrid from './components/FeedGrid'
 import Nav from './components/Nav'
 import CoordinateScene from './coordinate/CoordinateScene'
@@ -24,7 +24,8 @@ const ORIGIN_WIDTH_RATIO = 120 / 1200
 const DARK_PHASES = new Set(['exploding', 'centering', 'coordinate', 'uncentering'])
 
 const MOBILE_BREAKPOINT = 480
-const MOBILE_FOCUS_EXIT_MS = 300
+const MOBILE_FOCUS_TRANSITION_MS = 400
+const MOBILE_FOCUS_EXIT_MS = MOBILE_FOCUS_TRANSITION_MS
 
 export default function App() {
   const [phase, setPhase] = useState('feed')
@@ -33,6 +34,7 @@ export default function App() {
   const [sceneZoom, setSceneZoom] = useState(1)
   // { id, rect, exiting } — mobile focus overlay (tap a card to enlarge it)
   const [mobileFocus, setMobileFocus] = useState(null)
+  const mobileFocusScrollLockRef = useRef(0)
   const [isMobile, setIsMobile] = useState(
     () => document.documentElement.clientWidth <= MOBILE_BREAKPOINT,
   )
@@ -44,7 +46,6 @@ export default function App() {
   }, [])
 
   const points = useCoordinatePoints()
-
   // Target pixel width of the centered origin item (and every coordinate thumbnail)
   const [originTargetWidth, setOriginTargetWidth] = useState(
     () => window.innerWidth * ORIGIN_WIDTH_RATIO,
@@ -70,7 +71,14 @@ export default function App() {
 
   const handleMobileFocus = useCallback((id, rect) => {
     if (!isMobile || phase !== 'feed') return
-    setMobileFocus({ id, rect, exiting: false })
+    setMobileFocus({
+      id,
+      rect,
+      exiting: false,
+      previousId: null,
+      direction: 0,
+      phase: 'enter',
+    })
   }, [isMobile, phase])
 
   const exitMobileFocus = useCallback(() => {
@@ -84,6 +92,24 @@ export default function App() {
   }, [mobileFocus])
 
   useEffect(() => {
+    if (!mobileFocus || mobileFocus.exiting) return
+    if (mobileFocus.phase !== 'enter' && mobileFocus.phase !== 'anim') return
+    const t = setTimeout(() => {
+      setMobileFocus((current) => {
+        if (!current || current.exiting) return current
+        if (current.id !== mobileFocus.id || current.phase !== mobileFocus.phase) return current
+        return {
+          ...current,
+          previousId: null,
+          direction: 0,
+          phase: 'idle',
+        }
+      })
+    }, MOBILE_FOCUS_TRANSITION_MS)
+    return () => clearTimeout(t)
+  }, [mobileFocus])
+
+  useEffect(() => {
     document.body.classList.toggle(
       'is-mobile-focus',
       !!mobileFocus && !mobileFocus.exiting,
@@ -93,6 +119,40 @@ export default function App() {
       !!mobileFocus && mobileFocus.exiting,
     )
   }, [mobileFocus])
+
+  useEffect(() => {
+    if (!isMobile) return
+    const shouldLockScroll = !!mobileFocus
+    if (!shouldLockScroll) return
+
+    const scrollY = window.scrollY
+    mobileFocusScrollLockRef.current = scrollY
+
+    const { style } = document.body
+    const prevPosition = style.position
+    const prevTop = style.top
+    const prevLeft = style.left
+    const prevRight = style.right
+    const prevWidth = style.width
+    const prevOverflow = style.overflow
+
+    style.position = 'fixed'
+    style.top = `-${scrollY}px`
+    style.left = '0'
+    style.right = '0'
+    style.width = '100%'
+    style.overflow = 'hidden'
+
+    return () => {
+      style.position = prevPosition
+      style.top = prevTop
+      style.left = prevLeft
+      style.right = prevRight
+      style.width = prevWidth
+      style.overflow = prevOverflow
+      window.scrollTo(0, mobileFocusScrollLockRef.current)
+    }
+  }, [isMobile, mobileFocus])
 
   // Phase timing. We advance phase via setTimeout so CSS transitions can run
   // in sequence without fighting each other.
@@ -142,7 +202,6 @@ export default function App() {
         originTargetWidth={originTargetWidth}
         sceneZoom={sceneZoom}
         onItemDoubleClick={handleItemDoubleClick}
-        isMobile={isMobile}
         mobileFocus={mobileFocus}
         onMobileFocus={handleMobileFocus}
         onExitMobileFocus={exitMobileFocus}

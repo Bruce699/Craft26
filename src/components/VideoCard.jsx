@@ -6,7 +6,6 @@ const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
 
 const MOBILE_FOCUS_GAP = 4
-const MOBILE_SWIPE_THRESHOLD = 30
 
 export default function VideoCard({
   id,
@@ -20,8 +19,12 @@ export default function VideoCard({
   sceneZoom = 1,
   onDoubleClick,
   isMobile = false,
+  mobileFocusActive = false,
   isMobileFocused = false,
+  isMobileFocusPrevious = false,
   mobileFocusRect = null,
+  mobileFocusPhase = null,
+  mobileFocusDirection = 0,
   mobileFocusExiting = false,
   onMobileFocus,
   onExitMobileFocus,
@@ -31,6 +34,19 @@ export default function VideoCard({
   const originalRectRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
   const [posterLoaded, setPosterLoaded] = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+  const [videoAspectRatio, setVideoAspectRatio] = useState(null)
+  const isVideoSizedCard = id === 'c3r1'
+
+  const getMobileFocusTransform = (rect) => {
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = window.innerWidth / 2 - cx
+    const dy = window.innerHeight / 2 - cy
+    const targetWidth = window.innerWidth - MOBILE_FOCUS_GAP * 2
+    const scale = targetWidth / rect.width
+    return { dx, dy, scale }
+  }
 
   // Reveal the card (fade + slight upward motion) only after the poster img
   // below has actually rendered. Double rAF guarantees the hidden initial
@@ -46,10 +62,40 @@ export default function VideoCard({
   // Once transforms kick in, getBoundingClientRect would return the *moved*
   // position, so we stop updating the snapshot once we leave the feed phase.
   useEffect(() => {
-    if (phase === 'feed' && rootRef.current) {
+    if (phase === 'feed' && !mobileFocusActive && rootRef.current) {
       originalRectRef.current = rootRef.current.getBoundingClientRect()
     }
   })
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const markReady = () => setVideoReady(true)
+    const resetReady = () => setVideoReady(false)
+    const syncAspectRatio = () => {
+      if (video.videoWidth && video.videoHeight) {
+        setVideoAspectRatio(video.videoWidth / video.videoHeight)
+      }
+    }
+
+    setVideoReady(video.readyState >= 2)
+    syncAspectRatio()
+
+    video.addEventListener('loadeddata', markReady)
+    video.addEventListener('canplay', markReady)
+    video.addEventListener('loadedmetadata', syncAspectRatio)
+    video.addEventListener('resize', syncAspectRatio)
+    video.addEventListener('emptied', resetReady)
+
+    return () => {
+      video.removeEventListener('loadeddata', markReady)
+      video.removeEventListener('canplay', markReady)
+      video.removeEventListener('loadedmetadata', syncAspectRatio)
+      video.removeEventListener('resize', syncAspectRatio)
+      video.removeEventListener('emptied', resetReady)
+    }
+  }, [playbackId])
 
   // Auto play/pause based on viewport visibility — only in feed mode.
   // Once the easter egg triggers, the origin is paused explicitly and all
@@ -78,9 +124,22 @@ export default function VideoCard({
 
     let cancelled = false
     const attemptPlay = () => {
-      if (cancelled || !isVisible) return
+      if (cancelled) return
       const p = video.play()
       if (p && typeof p.catch === 'function') p.catch(() => {})
+    }
+
+    if (isMobile && mobileFocusActive) {
+      if (isMobileFocused) {
+        video.preload = 'auto'
+        attemptPlay()
+      } else {
+        video.preload = 'metadata'
+        video.pause()
+      }
+      return () => {
+        cancelled = true
+      }
     }
 
     if (isVisible) {
@@ -93,7 +152,13 @@ export default function VideoCard({
     } else {
       video.pause()
     }
-  }, [isVisible, phase])
+  }, [
+    isMobile,
+    isMobileFocused,
+    isVisible,
+    mobileFocusActive,
+    phase,
+  ])
 
   // When this card becomes the origin, pause on the current frame
   useEffect(() => {
@@ -123,7 +188,7 @@ export default function VideoCard({
     onMobileFocus(id, rect)
   }
 
-  // When focused on mobile: any click outside exits; any swipe on the card exits.
+  // When focused on mobile: any click outside exits.
   useEffect(() => {
     if (!isMobileFocused || mobileFocusExiting) return
     const el = rootRef.current
@@ -138,34 +203,10 @@ export default function VideoCard({
       document.addEventListener('touchstart', onDocClick, { capture: true, passive: true })
     })
 
-    let startX = 0
-    let startY = 0
-    let swiped = false
-    const onTouchStart = (e) => {
-      swiped = false
-      const t = e.touches[0]
-      startX = t.clientX
-      startY = t.clientY
-    }
-    const onTouchMove = (e) => {
-      if (swiped) return
-      const t = e.touches[0]
-      if (
-        Math.hypot(t.clientX - startX, t.clientY - startY) > MOBILE_SWIPE_THRESHOLD
-      ) {
-        swiped = true
-        onExitMobileFocus?.()
-      }
-    }
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: true })
-
     return () => {
       cancelAnimationFrame(rafId)
       document.removeEventListener('click', onDocClick, true)
       document.removeEventListener('touchstart', onDocClick, { capture: true })
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
     }
   }, [isMobileFocused, mobileFocusExiting, onExitMobileFocus])
 
@@ -174,16 +215,26 @@ export default function VideoCard({
   // For the origin card: translate to viewport center, then scale down.
   const transitionStyle = useMemo(() => {
     // Mobile focus overlay — takes precedence over feed phase.
-    if (isMobileFocused && mobileFocusRect) {
-      const r = mobileFocusRect
-      const cx = r.left + r.width / 2
-      const cy = r.top + r.height / 2
-      const dx = window.innerWidth / 2 - cx
-      const dy = window.innerHeight / 2 - cy
-      const targetWidth = window.innerWidth - MOBILE_FOCUS_GAP * 2
-      const scale = targetWidth / r.width
+    if (isMobileFocused || isMobileFocusPrevious) {
+      const focusRect = originalRectRef.current ?? mobileFocusRect
+      if (!focusRect) return null
+      const { dx, dy, scale } = getMobileFocusTransform(focusRect)
       const commonTransition =
-        'transform 0.3s cubic-bezier(0.5, 0, 0, 1), border-radius 0.3s cubic-bezier(0.5, 0, 0, 1)'
+        'transform 0.4s cubic-bezier(0.5, 0, 0, 1), border-radius 0.4s cubic-bezier(0.5, 0, 0, 1)'
+      const centeredTransform = `translate(${dx}px, ${dy}px) scale(${scale})`
+
+      if (isMobileFocusPrevious) {
+        const outgoingTransform =
+          `translate(${dx - mobileFocusDirection * window.innerWidth}px, ${dy}px) scale(${scale})`
+        return {
+          transform: mobileFocusPhase === 'anim' ? outgoingTransform : centeredTransform,
+          borderRadius: `${4 / scale}px`,
+          transition: mobileFocusPhase === 'anim' ? commonTransition : 'none',
+          zIndex: 99,
+          pointerEvents: 'none',
+        }
+      }
+
       if (mobileFocusExiting) {
         return {
           transform: 'translate(0px, 0px) scale(1)',
@@ -192,8 +243,17 @@ export default function VideoCard({
           zIndex: 100,
         }
       }
+      if (mobileFocusPhase === 'prep') {
+        return {
+          transform:
+            `translate(${dx + mobileFocusDirection * window.innerWidth}px, ${dy}px) scale(${scale})`,
+          borderRadius: `${4 / scale}px`,
+          transition: 'none',
+          zIndex: 100,
+        }
+      }
       return {
-        transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+        transform: centeredTransform,
         // Divide by scale so the visual corner is ~4px after the transform.
         borderRadius: `${4 / scale}px`,
         transition: commonTransition,
@@ -287,19 +347,29 @@ export default function VideoCard({
     originRect,
     originTargetWidth,
     sceneZoom,
+    isMobileFocusPrevious,
     isMobileFocused,
     mobileFocusRect,
+    mobileFocusPhase,
+    mobileFocusDirection,
     mobileFocusExiting,
   ])
+
+  const cardStyle = {
+    ...(transitionStyle ?? {}),
+    ...(isVideoSizedCard && videoAspectRatio
+      ? { aspectRatio: String(videoAspectRatio) }
+      : {}),
+  }
 
   return (
     <div
       ref={rootRef}
-      className={`video-card ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''}`}
+      className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''}`}
       data-grid-id={id}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      style={transitionStyle ?? undefined}
+      style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}
     >
       <img
         className="video-card__poster"
@@ -314,7 +384,7 @@ export default function VideoCard({
         muted
         loop
         playsinline=""
-        preload="metadata"
+        preload={isMobile && mobileFocusActive && isMobileFocused ? 'auto' : 'metadata'}
       />
       <div className="video-card__info">
         <span className="video-card__name">{name}</span>

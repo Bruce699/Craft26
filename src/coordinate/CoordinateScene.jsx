@@ -15,6 +15,14 @@ const STAGGER_STEP = 20 // ms between each item
 // direction (i.e. pointing into or out of the screen).
 const AXIS_FADE_DEG_START = 30 // fully visible at this angle and above
 const AXIS_FADE_DEG_END = 15 // fully faded at this angle and below
+const MINIMAP_ORBIT_RADIUS_SCALE = 1.16
+const MINIMAP_ORBIT_SEGMENTS = 48
+const MINIMAP_LABEL_OFFSET = 10
+const MINIMAP_IDLE_OPACITY = 0.6
+const MINIMAP_VERTICAL_LABEL_THRESHOLD = 0.24
+const MINIMAP_Y_LABEL_GAP = 3
+const MINIMAP_Y_LABEL_ABOVE_AXIS = 6
+const COORDINATE_THUMBNAIL_VERSION = '2026-04-22-icebreaker-fix'
 
 // cubic-bezier(0.5, 0, 0, 1) solver — same curve as the DOM transitions
 function makeCubicBezier(p1x, p1y, p2x, p2y) {
@@ -61,6 +69,29 @@ function orientationFade(angleRad) {
   return t * t * (3 - 2 * t)
 }
 
+function pickUpperLeftPerp(ux, uy) {
+  const a = { x: -uy, y: ux }
+  const b = { x: uy, y: -ux }
+  if (a.y !== b.y) return a.y < b.y ? a : b
+  return a.x < b.x ? a : b
+}
+
+function buildOrbitPath(a, b, radius) {
+  const orbitRadius = radius * MINIMAP_ORBIT_RADIUS_SCALE
+  const commands = []
+
+  for (let i = 0; i <= MINIMAP_ORBIT_SEGMENTS; i++) {
+    const t = (i / MINIMAP_ORBIT_SEGMENTS) * Math.PI * 2
+    const cos = Math.cos(t)
+    const sin = Math.sin(t)
+    const x = (cos * a.x + sin * b.x) * orbitRadius
+    const y = (cos * a.y + sin * b.y) * orbitRadius
+    commands.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`)
+  }
+
+  return commands.join(' ')
+}
+
 function Axes({ exiting }) {
   const materialsRef = useRef([null, null, null])
   const startRef = useRef(null)
@@ -100,6 +131,7 @@ function Axes({ exiting }) {
     for (let i = 0; i < mats.length; i++) {
       if (mats[i]) mats[i].opacity = opacity
     }
+
   })
 
   return (
@@ -339,6 +371,138 @@ function SnapToAxisView() {
   })
 
   return null
+}
+
+// Mini-map driver: translates camera orientation into screen-space 2D
+// directions for each world axis and writes them to DOM refs each frame.
+// Using the view matrix's columns gives unit-bounded vectors whose 2D length
+// naturally collapses toward zero when the axis points into/out of the screen.
+function AxisMinimapDriver({ refs, radius }) {
+  const camera = useThree((s) => s.camera)
+
+  useFrame(() => {
+    const m = camera.matrixWorldInverse.elements
+    // Columns 0, 1, 2 are world X, Y, Z axes expressed in view space.
+    const axes = {
+      x: { x: m[0], y: m[1] },
+      y: { x: m[4], y: m[5] },
+      z: { x: m[8], y: m[9] },
+    }
+    const screenAxes = {
+      x: { x: axes.x.x, y: -axes.x.y },
+      y: { x: axes.y.x, y: -axes.y.y },
+      z: { x: axes.z.x, y: -axes.z.y },
+    }
+
+    for (const key of ['x', 'y', 'z']) {
+      const a = axes[key]
+      // View Y is up; screen Y is down — flip.
+      const sx = a.x
+      const sy = -a.y
+      const len = Math.hypot(sx, sy) // 0..1
+      const angle = Math.atan2(sy, sx)
+      const endpointDist = radius * len
+
+      const lineLength = radius * 2 * len
+      const axisEl = refs[key].current
+      if (axisEl) {
+        axisEl.style.width = `${lineLength}px`
+        axisEl.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`
+      }
+
+      const positiveDotEl = refs[`${key}PositiveDot`].current
+      const negativeDotEl = refs[`${key}NegativeDot`].current
+      if (positiveDotEl) {
+        positiveDotEl.style.opacity = len < 0.02 ? '0' : '1'
+        positiveDotEl.style.transform =
+          `translate(-50%, -50%) translate(${sx * radius}px, ${sy * radius}px)`
+      }
+      if (negativeDotEl) {
+        negativeDotEl.style.opacity = len < 0.02 ? '0' : '1'
+        negativeDotEl.style.transform =
+          `translate(-50%, -50%) translate(${-sx * radius}px, ${-sy * radius}px)`
+      }
+
+      // Angle from the nearest reference axis arm (0..45°).
+      const deg = (Math.abs(angle) * 180) / Math.PI
+      const modDeg = deg % 90
+      const angleFromRef = Math.min(modDeg, 90 - modDeg)
+
+      const labelEl = refs[`${key}Label`].current
+      if (labelEl) {
+        if (len < 0.02) {
+          labelEl.style.opacity = '0'
+        } else {
+          const ux = sx / len
+          const uy = sy / len
+          labelEl.style.opacity = '1'
+          labelEl.style.transform =
+            key === 'y'
+              ? (() => {
+                  const labelDist = endpointDist + MINIMAP_Y_LABEL_GAP
+                  return `translate(-50%, -50%) translate(${ux * labelDist}px, ${uy * labelDist - MINIMAP_Y_LABEL_ABOVE_AXIS}px)`
+                })()
+              : (() => {
+                  const useUpperLeftPlacement =
+                    Math.abs(ux) <= MINIMAP_VERTICAL_LABEL_THRESHOLD
+                  return useUpperLeftPlacement
+                    ? (() => {
+                        const labelPerp = pickUpperLeftPerp(ux, uy)
+                        const labelX = ux * endpointDist + labelPerp.x * MINIMAP_LABEL_OFFSET
+                        const labelY = uy * endpointDist + labelPerp.y * MINIMAP_LABEL_OFFSET
+                        return `translate(-100%, -100%) translate(${labelX}px, ${labelY}px)`
+                      })()
+                    : (() => {
+                        const labelX = ux * endpointDist * 0.64
+                        const labelY = uy * endpointDist * 0.64 - MINIMAP_LABEL_OFFSET
+                        return `translate(-50%, -100%) translate(${labelX}px, ${labelY}px)`
+                      })()
+                })()
+          labelEl.textContent = `${key.toUpperCase()} ${Math.round(angleFromRef)}°`
+        }
+      }
+    }
+
+    const orbitDefs = [
+      ['xyOrbit', screenAxes.x, screenAxes.y],
+      ['yzOrbit', screenAxes.y, screenAxes.z],
+      ['zxOrbit', screenAxes.z, screenAxes.x],
+    ]
+    for (const [refKey, a, b] of orbitDefs) {
+      const orbitEl = refs[refKey].current
+      if (!orbitEl) continue
+      orbitEl.setAttribute('d', buildOrbitPath(a, b, radius))
+    }
+  })
+
+  return null
+}
+
+function AxisMinimap({ refs }) {
+  return (
+    <div ref={refs.root} className="axis-minimap">
+      <div className="minimap-ref minimap-ref-h" />
+      <div className="minimap-ref minimap-ref-v" />
+      <svg className="minimap-orbits" viewBox="-64 -64 128 128" aria-hidden="true">
+        <path ref={refs.xyOrbit} className="minimap-orbit" />
+        <path ref={refs.yzOrbit} className="minimap-orbit" />
+        <path ref={refs.zxOrbit} className="minimap-orbit" />
+      </svg>
+      <div ref={refs.x} className="minimap-axis" />
+      <div ref={refs.y} className="minimap-axis" />
+      <div ref={refs.z} className="minimap-axis" />
+      <div ref={refs.xPositiveDot} className="minimap-tip" />
+      <div ref={refs.xNegativeDot} className="minimap-tip" />
+      <div ref={refs.yPositiveDot} className="minimap-tip" />
+      <div ref={refs.yNegativeDot} className="minimap-tip" />
+      <div ref={refs.zPositiveDot} className="minimap-tip" />
+      <div ref={refs.zNegativeDot} className="minimap-tip" />
+      <div className="minimap-origin" />
+      <div ref={refs.xLabel} className="minimap-angle" />
+      <div ref={refs.yLabel} className="minimap-angle" />
+      <div ref={refs.zLabel} className="minimap-angle" />
+    </div>
+  )
 }
 
 function ZoomBroadcaster({ onZoomChange }) {
@@ -629,6 +793,53 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
     [],
   )
 
+  const minimapRootRef = useRef()
+  const minimapXRef = useRef()
+  const minimapYRef = useRef()
+  const minimapZRef = useRef()
+  const minimapXYOrbitRef = useRef()
+  const minimapYZOrbitRef = useRef()
+  const minimapZXOrbitRef = useRef()
+  const minimapXPositiveDotRef = useRef()
+  const minimapXNegativeDotRef = useRef()
+  const minimapYPositiveDotRef = useRef()
+  const minimapYNegativeDotRef = useRef()
+  const minimapZPositiveDotRef = useRef()
+  const minimapZNegativeDotRef = useRef()
+  const minimapXLabelRef = useRef()
+  const minimapYLabelRef = useRef()
+  const minimapZLabelRef = useRef()
+  const minimapRefs = useMemo(
+    () => ({
+      root: minimapRootRef,
+      x: minimapXRef,
+      y: minimapYRef,
+      z: minimapZRef,
+      xyOrbit: minimapXYOrbitRef,
+      yzOrbit: minimapYZOrbitRef,
+      zxOrbit: minimapZXOrbitRef,
+      xPositiveDot: minimapXPositiveDotRef,
+      xNegativeDot: minimapXNegativeDotRef,
+      yPositiveDot: minimapYPositiveDotRef,
+      yNegativeDot: minimapYNegativeDotRef,
+      zPositiveDot: minimapZPositiveDotRef,
+      zNegativeDot: minimapZNegativeDotRef,
+      xLabel: minimapXLabelRef,
+      yLabel: minimapYLabelRef,
+      zLabel: minimapZLabelRef,
+    }),
+    [],
+  )
+
+  // Fade the minimap in with the rest of the scene; fade out while exiting.
+  useEffect(() => {
+    const el = minimapRootRef.current
+    if (!el) return
+    // Match the axis enter/exit timing used by <Axes> and <AxisLabelDriver>.
+    el.style.transition = `opacity ${ENTER_DURATION}ms cubic-bezier(0.5, 0, 0, 1)`
+    el.style.opacity = exiting ? '0' : String(MINIMAP_IDLE_OPACITY)
+  }, [exiting])
+
   return (
     <div className="coordinate-scene">
       <Canvas
@@ -655,7 +866,7 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
         {relative.map((p, i) => (
           <ThumbnailBillboard
             key={p.id}
-            url={`/coordinate-thumbnail/${p.id}.png`}
+            url={`/coordinate-thumbnail/${p.id}.png?v=${COORDINATE_THUMBNAIL_VERSION}`}
             position={p.position}
             width={thumbnailWidth}
             delay={i * STAGGER_STEP}
@@ -674,6 +885,7 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
         <ZoomBroadcaster onZoomChange={onZoomChange} />
         <SnapToAxisView />
         <AxisLabelDriver labelRefs={labelRefs} exiting={exiting} />
+        <AxisMinimapDriver refs={minimapRefs} radius={50} />
       </Canvas>
       <div ref={xMinusRef} className="axis-label">Less time spent</div>
       <div ref={xPlusRef} className="axis-label">More time spent</div>
@@ -681,6 +893,7 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
       <div ref={yMinusRef} className="axis-label">Keyframed</div>
       <div ref={zMinusRef} className="axis-label">Before</div>
       <div ref={zPlusRef} className="axis-label">After</div>
+      <AxisMinimap refs={minimapRefs} />
     </div>
   )
 }
