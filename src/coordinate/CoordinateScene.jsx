@@ -110,6 +110,7 @@ function Axes({ exiting }) {
       make([0, 0, -AXIS_LENGTH], [0, 0, AXIS_LENGTH]),
     ]
   }, [])
+  useEffect(() => () => geoms.forEach((g) => g.dispose()), [geoms])
 
   useFrame((state) => {
     const mats = materialsRef.current
@@ -152,7 +153,7 @@ function Axes({ exiting }) {
   )
 }
 
-function ThumbnailBillboard({ url, position, width, delay, exiting }) {
+function ThumbnailBillboard({ url, position, width, delay, exiting, selected, onSelect }) {
   const [texture, setTexture] = useState(null)
   const [height, setHeight] = useState(width)
   const meshRef = useRef()
@@ -160,15 +161,27 @@ function ThumbnailBillboard({ url, position, width, delay, exiting }) {
   const startRef = useRef(null)
   const exitStartRef = useRef(null)
   const exitFromRef = useRef({ scale: 1, opacity: 1 })
+  const outlineGeom = useMemo(() => {
+    const plane = new THREE.PlaneGeometry(width, height)
+    const edges = new THREE.EdgesGeometry(plane)
+    plane.dispose()
+    return edges
+  }, [width, height])
+  useEffect(() => () => outlineGeom.dispose(), [outlineGeom])
 
   useEffect(() => {
     let cancelled = false
+    let loadedTex = null
     const loader = new THREE.TextureLoader()
     loader.load(
       url,
       (tex) => {
-        if (cancelled) return
+        if (cancelled) {
+          tex.dispose()
+          return
+        }
         tex.colorSpace = THREE.SRGBColorSpace
+        loadedTex = tex
         setTexture(tex)
         const img = tex.image
         const iw = img.naturalWidth || img.width
@@ -180,6 +193,7 @@ function ThumbnailBillboard({ url, position, width, delay, exiting }) {
     )
     return () => {
       cancelled = true
+      if (loadedTex) loadedTex.dispose()
     }
   }, [url, width])
 
@@ -221,16 +235,29 @@ function ThumbnailBillboard({ url, position, width, delay, exiting }) {
 
   return (
     <Billboard position={position}>
-      <mesh ref={meshRef} scale={0.0001}>
-        <planeGeometry args={[width, height]} />
-        <meshBasicMaterial
-          ref={materialRef}
-          map={texture}
-          transparent
-          toneMapped={false}
-          opacity={0}
-        />
-      </mesh>
+      <group ref={meshRef} scale={0.0001}>
+        <mesh
+          onClick={(e) => {
+            if (!onSelect) return
+            e.stopPropagation()
+            onSelect()
+          }}
+        >
+          <planeGeometry args={[width, height]} />
+          <meshBasicMaterial
+            ref={materialRef}
+            map={texture}
+            transparent
+            toneMapped={false}
+            opacity={0}
+          />
+        </mesh>
+        {selected && (
+          <lineSegments geometry={outlineGeom}>
+            <lineBasicMaterial color="#F83F01" transparent />
+          </lineSegments>
+        )}
+      </group>
     </Billboard>
   )
 }
@@ -729,6 +756,139 @@ function AxisLabelDriver({ labelRefs, exiting }) {
   return null
 }
 
+const SELECT_LINE_DURATION = 250
+const SELECT_DOT_DURATION = 100
+const SELECT_LABEL_GAP = 4
+
+function SelectionOverlay({ point, data, refs }) {
+  const { camera, size } = useThree()
+  const startRef = useRef(null)
+  const prevKeyRef = useRef(null)
+  const v = useMemo(() => new THREE.Vector3(), [])
+
+  const geomX = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    g.setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
+    return g
+  }, [])
+  const geomY = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    g.setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
+    return g
+  }, [])
+  const geomZ = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    g.setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
+    return g
+  }, [])
+  useEffect(
+    () => () => {
+      geomX.dispose()
+      geomY.dispose()
+      geomZ.dispose()
+    },
+    [geomX, geomY, geomZ],
+  )
+
+  useFrame((state) => {
+    const now = state.clock.elapsedTime * 1000
+    const key = `${point.x}|${point.y}|${point.z}`
+    if (prevKeyRef.current !== key) {
+      prevKeyRef.current = key
+      startRef.current = now
+    }
+    const elapsed = now - startRef.current
+    const lineT = Math.min(1, elapsed / SELECT_LINE_DURATION)
+    const lineE = ease(lineT)
+
+    const px = point.x, py = point.y, pz = point.z
+
+    const posX = geomX.attributes.position
+    posX.setXYZ(0, px, py, pz)
+    posX.setXYZ(1, px, py * (1 - lineE), pz * (1 - lineE))
+    posX.needsUpdate = true
+
+    const posY = geomY.attributes.position
+    posY.setXYZ(0, px, py, pz)
+    posY.setXYZ(1, px * (1 - lineE), py, pz * (1 - lineE))
+    posY.needsUpdate = true
+
+    const posZ = geomZ.attributes.position
+    posZ.setXYZ(0, px, py, pz)
+    posZ.setXYZ(1, px * (1 - lineE), py * (1 - lineE), pz)
+    posZ.needsUpdate = true
+
+    const dotT = Math.max(
+      0,
+      Math.min(1, (elapsed - SELECT_LINE_DURATION) / SELECT_DOT_DURATION),
+    )
+    const dotScale = ease(dotT)
+    const labelOpacity = dotT
+
+    const w = size.width, h = size.height
+    const project = (x, y, z) => {
+      v.set(x, y, z).project(camera)
+      return { x: (v.x + 1) * 0.5 * w, y: (1 - v.y) * 0.5 * h }
+    }
+    const originScreen = project(0, 0, 0)
+    const imgScreen = project(px, py, pz)
+    const xEnd = project(px, 0, 0)
+    const yEnd = project(0, py, 0)
+    const zEnd = project(0, 0, pz)
+
+    const setDot = (ref, pos) => {
+      if (!ref.current) return
+      ref.current.style.opacity = dotScale > 0 ? '1' : '0'
+      ref.current.style.transform =
+        `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${dotScale})`
+    }
+    setDot(refs.xDot, xEnd)
+    setDot(refs.yDot, yEnd)
+    setDot(refs.zDot, zEnd)
+
+    const setLabel = (ref, dotPos, axisEnd, text) => {
+      if (!ref.current) return
+      if (ref.current.textContent !== text) ref.current.textContent = text
+      ref.current.style.opacity = String(labelOpacity)
+      const axisDx = axisEnd.x - originScreen.x
+      const axisDy = axisEnd.y - originScreen.y
+      const axisLen = Math.hypot(axisDx, axisDy) || 1
+      const perpX = -axisDy / axisLen
+      const perpY = axisDx / axisLen
+      const imgDx = imgScreen.x - dotPos.x
+      const imgDy = imgScreen.y - dotPos.y
+      const imgSide = imgDx * perpX + imgDy * perpY
+      const sign = imgSide >= 0 ? -1 : 1
+      const ox = perpX * sign
+      const oy = perpY * sign
+      const labelX = dotPos.x + ox * SELECT_LABEL_GAP
+      const labelY = dotPos.y + oy * SELECT_LABEL_GAP
+      const thresh = 0.3
+      const xAnchor = Math.abs(ox) < thresh ? '-50%' : ox > 0 ? '0' : '-100%'
+      const yAnchor = Math.abs(oy) < thresh ? '-50%' : oy > 0 ? '0' : '-100%'
+      ref.current.style.transform =
+        `translate(${xAnchor}, ${yAnchor}) translate(${labelX}px, ${labelY}px)`
+    }
+    setLabel(refs.xLabel, xEnd, xEnd, data.xText)
+    setLabel(refs.yLabel, yEnd, yEnd, data.yText)
+    setLabel(refs.zLabel, zEnd, zEnd, data.zText)
+  })
+
+  return (
+    <>
+      <line geometry={geomX}>
+        <lineBasicMaterial color="#F83F01" transparent />
+      </line>
+      <line geometry={geomY}>
+        <lineBasicMaterial color="#F83F01" transparent />
+      </line>
+      <line geometry={geomZ}>
+        <lineBasicMaterial color="#F83F01" transparent />
+      </line>
+    </>
+  )
+}
+
 export default function CoordinateScene({ points, originId, thumbnailWidth, onZoomChange, exiting = false }) {
   const origin = points.find((p) => p.id === originId)
   const relative = useMemo(() => {
@@ -840,6 +1000,42 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
     el.style.opacity = exiting ? '0' : String(MINIMAP_IDLE_OPACITY)
   }, [exiting])
 
+  const [selectedId, setSelectedId] = useState(null)
+  const selected = useMemo(
+    () => (selectedId ? relative.find((p) => p.id === selectedId) : null),
+    [selectedId, relative],
+  )
+  const selectionData = useMemo(() => {
+    if (!selected) return null
+    return {
+      xText: `${selected.hours} Hrs`,
+      yText: `Level ${selected.procIndex}`,
+      zText: selected.date,
+    }
+  }, [selected])
+
+  const xDotRef = useRef()
+  const yDotRef = useRef()
+  const zDotRef = useRef()
+  const xSelLabelRef = useRef()
+  const ySelLabelRef = useRef()
+  const zSelLabelRef = useRef()
+  const selectionRefs = useMemo(
+    () => ({
+      xDot: xDotRef,
+      yDot: yDotRef,
+      zDot: zDotRef,
+      xLabel: xSelLabelRef,
+      yLabel: ySelLabelRef,
+      zLabel: zSelLabelRef,
+    }),
+    [],
+  )
+
+  useEffect(() => {
+    if (exiting) setSelectedId(null)
+  }, [exiting])
+
   return (
     <div className="coordinate-scene">
       <Canvas
@@ -871,8 +1067,17 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
             width={thumbnailWidth}
             delay={i * STAGGER_STEP}
             exiting={exiting}
+            selected={selectedId === p.id}
+            onSelect={() => setSelectedId(p.id)}
           />
         ))}
+        {selected && selectionData && !exiting && (
+          <SelectionOverlay
+            point={{ x: selected.position[0], y: selected.position[1], z: selected.position[2] }}
+            data={selectionData}
+            refs={selectionRefs}
+          />
+        )}
         <OrbitControls
           enablePan={false}
           enableZoom
@@ -893,6 +1098,16 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
       <div ref={yMinusRef} className="axis-label">Keyframed</div>
       <div ref={zMinusRef} className="axis-label">Before</div>
       <div ref={zPlusRef} className="axis-label">After</div>
+      {selected && (
+        <>
+          <div ref={xDotRef} className="selection-dot" />
+          <div ref={yDotRef} className="selection-dot" />
+          <div ref={zDotRef} className="selection-dot" />
+          <div ref={xSelLabelRef} className="selection-label" />
+          <div ref={ySelLabelRef} className="selection-label" />
+          <div ref={zSelLabelRef} className="selection-label" />
+        </>
+      )}
       <AxisMinimap refs={minimapRefs} />
     </div>
   )

@@ -93,6 +93,8 @@ export function useCoordinatePoints() {
         id: item.id,
         name: item.name,
         date: item.date,
+        hours: coord.x,
+        procIndex: coord.y,
         x: xLevel * xPxPerLevel,
         y: (coord.y - Y_MIN_INDEX) * yPxPerStep,
         z: (parseMonthYear(item.date) - earliest) * zPxPerMonth,
