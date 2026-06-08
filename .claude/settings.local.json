@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(winget upgrade:*)"
+      "Bash(winget upgrade:*)",
+      "Bash(curl -s -o \"/tmp/mux_8AZ.jpg\" \"https://image.mux.com/8AZ01lFBOOxlehVCCvnYwrkGo02jNhsqR9PfcSDcCqYq00/thumbnail.jpg?width=320\")",
+      "Bash(curl -s -o \"/tmp/mux_ZBA.jpg\" \"https://image.mux.com/ZBAXXn5AAt3DGWG9lp9vzl00JYOyEhTYwO43uYi4SOe00/thumbnail.jpg?width=320\")",
+      "Read(//c/tmp/**)",
+      "PowerShell($dir = \"$env:TEMP\\\\muxverify\"; New-Item -ItemType Directory -Force $dir | Out-Null; Invoke-WebRequest -Uri \"https://image.mux.com/8AZ01lFBOOxlehVCCvnYwrkGo02jNhsqR9PfcSDcCqYq00/thumbnail.jpg?width=320\" -OutFile \"$dir\\\\mux_8AZ.jpg\"; Invoke-WebRequest -Uri \"https://image.mux.com/ZBAXXn5AAt3DGWG9lp9vzl00JYOyEhTYwO43uYi4SOe00/thumbnail.jpg?width=320\" -OutFile \"$dir\\\\mux_ZBA.jpg\"; Write-Output $dir)"
     ]
   }
 }
