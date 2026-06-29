@@ -400,7 +400,7 @@ export default function VideoCard({
       >
         <img
           className="video-card__poster"
-          src={`/thumbnails/${id}.jpg`}
+          src={`/thumbnails/${encodeURIComponent(name)}.jpg`}
           alt=""
           onLoad={handlePosterLoad}
           onError={handlePosterLoad}
