@@ -35,6 +35,13 @@ const ABOUT_LOGO_ROTATION_FORCE = 0.0675
 const ABOUT_LOGO_ROTATION_DAMPING = 0.9
 const ABOUT_LOGO_ROTATION_RETURN = 0.0375
 const ABOUT_LOGO_TRANSLATION_RATIO = 0.65
+const GOOGLE_LOGO = { src: '/Logos/Google.png', alt: 'Google' }
+const SHOPIFY_LOGOS = [
+  { src: '/Logos/Shopify_1.png', alt: 'Shopify' },
+  { src: '/Logos/Shopify_2.png', alt: 'Shopify' },
+  { src: '/Logos/Shopify_3.png', alt: 'Shopify' },
+  { src: '/Logos/Shopify_4.png', alt: 'Shopify' },
+]
 
 function getInitialPage() {
   return window.location.hash === '#about' ? 'about' : 'craft'
@@ -62,6 +69,7 @@ export default function App() {
   const aboutLogoBoundsRef = useRef(null)
   const aboutLogoRafRef = useRef(0)
   const aboutLogoVisibleRafRef = useRef(0)
+  const shopifyLogoIndexRef = useRef(0)
   const [isMobile, setIsMobile] = useState(
     () => document.documentElement.clientWidth <= MOBILE_BREAKPOINT,
   )
@@ -109,6 +117,12 @@ export default function App() {
       })
     })
   }, [isMobile])
+
+  const showNextShopifyLogo = useCallback((event) => {
+    const currentIndex = shopifyLogoIndexRef.current
+    shopifyLogoIndexRef.current = (currentIndex + 1) % SHOPIFY_LOGOS.length
+    showAboutLogo(event, SHOPIFY_LOGOS[currentIndex])
+  }, [showAboutLogo])
 
   const handleAboutLogoMove = useCallback((event) => {
     if (isMobile || !aboutLogoBoundsRef.current) return
@@ -389,7 +403,7 @@ export default function App() {
               href="https://design.google/"
               target="_blank"
               rel="noopener noreferrer"
-              onMouseEnter={(event) => showAboutLogo(event, { src: '/Google.png', alt: 'Google' })}
+              onMouseEnter={(event) => showAboutLogo(event, GOOGLE_LOGO)}
               onMouseMove={handleAboutLogoMove}
             >
               Google
@@ -399,7 +413,7 @@ export default function App() {
               href="https://shopify.design"
               target="_blank"
               rel="noopener noreferrer"
-              onMouseEnter={(event) => showAboutLogo(event, { src: '/Shopify.png', alt: 'Shopify' })}
+              onMouseEnter={showNextShopifyLogo}
               onMouseMove={handleAboutLogoMove}
             >
               Product Design
@@ -410,7 +424,7 @@ export default function App() {
               href="https://shopify.design"
               target="_blank"
               rel="noopener noreferrer"
-              onMouseEnter={(event) => showAboutLogo(event, { src: '/Shopify.png', alt: 'Shopify' })}
+              onMouseEnter={showNextShopifyLogo}
               onMouseMove={handleAboutLogoMove}
             >
               Studio at Shopify
