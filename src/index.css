@@ -23,11 +23,15 @@
 }
 
 html {
-  /* Always reserve space for the vertical scrollbar so layout width
-     doesn't shift (and columns don't get miscomputed) once content
-     becomes scrollable */
+  /* Keep the page scrollable but hide the scrollbar itself. With no
+     scrollbar rendered, layout width never shifts, so no gutter is
+     needed to keep columns stable */
   overflow-y: scroll;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {

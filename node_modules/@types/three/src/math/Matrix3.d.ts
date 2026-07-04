@@ -17,7 +17,7 @@ export type Matrix3Tuple = [
 ];
 
 export class Matrix3 {
-    static readonly isMatrix3: boolean;
+    readonly isMatrix3: true;
 
     /**
      * Array with matrix values.
@@ -99,10 +99,19 @@ export class Matrix3 {
 
     setUvTransform(tx: number, ty: number, sx: number, sy: number, rotation: number, cx: number, cy: number): this;
 
+    /**
+     * @deprecated Use .makeScale() instead.
+     */
     scale(sx: number, sy: number): this;
 
+    /**
+     * @deprecated Use .makeRotation() instead.
+     */
     rotate(theta: number): this;
 
+    /**
+     * @deprecated Use .makeTranslation() instead.
+     */
     translate(tx: number, ty: number): this;
 
     /**

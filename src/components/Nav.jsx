@@ -9,9 +9,12 @@ export default function Nav() {
         target="_blank"
         rel="noopener noreferrer"
       >
-        Site 25
+        Work
       </a>
-      <span className="nav-pill__current">Craft 26</span>
+      <span className="nav-pill__current">Craft</span>
+      <a className="nav-pill__link" href="#">
+        About
+      </a>
     </nav>
   )
 }

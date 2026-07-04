@@ -3,9 +3,9 @@
   top: 40px;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   align-items: center;
   padding: 6px 16px;
   gap: 24px;
@@ -40,8 +40,21 @@ body.is-mobile-focus-exiting .nav-pill {
 .nav-pill__link {
   color: #949494;
   text-decoration: none;
+  font-weight: 250;
 }
 
 .nav-pill__current {
   color: #F83F01;
+}
+
+.nav-pill > :nth-child(1) {
+  text-align: left;
+}
+
+.nav-pill > :nth-child(2) {
+  text-align: center;
+}
+
+.nav-pill > :nth-child(3) {
+  text-align: right;
 }
