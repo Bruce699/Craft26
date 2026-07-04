@@ -28,6 +28,11 @@ export default function VideoCard({
   mobileFocusExiting = false,
   onMobileFocus,
   onExitMobileFocus,
+  desktopFocusActive = false,
+  isDesktopFocused = false,
+  desktopFocusRect = null,
+  desktopFocusExiting = false,
+  onDesktopFocus,
 }) {
   const videoRef = useRef(null)
   const rootRef = useRef(null)
@@ -64,7 +69,7 @@ export default function VideoCard({
   // position, so we stop updating the snapshot once we leave the feed phase.
   useEffect(() => {
     const snapshotTarget = cardRef.current ?? rootRef.current
-    if (phase === 'feed' && !mobileFocusActive && snapshotTarget) {
+    if (phase === 'feed' && !mobileFocusActive && !desktopFocusActive && snapshotTarget) {
       originalRectRef.current = snapshotTarget.getBoundingClientRect()
     }
   })
@@ -172,6 +177,8 @@ export default function VideoCard({
 
   const handleDoubleClick = () => {
     if (isMobile) return
+    // Focus mode owns clicks — exit via the overlay, not the easter egg.
+    if (desktopFocusActive) return
     if (!onDoubleClick) return
     // Allow double-click in feed (to enter) OR on the origin card while in
     // the coordinate phase (to reverse back out).
@@ -182,12 +189,20 @@ export default function VideoCard({
   }
 
   const handleClick = () => {
-    if (!isMobile || phase !== 'feed') return
-    if (isMobileFocused) return
-    if (!onMobileFocus) return
+    if (phase !== 'feed') return
+    if (isMobile) {
+      if (isMobileFocused) return
+      if (!onMobileFocus) return
+      const rect = cardRef.current?.getBoundingClientRect()
+      if (!rect) return
+      onMobileFocus(id, rect)
+      return
+    }
+    if (isDesktopFocused || desktopFocusActive) return
+    if (!onDesktopFocus) return
     const rect = cardRef.current?.getBoundingClientRect()
     if (!rect) return
-    onMobileFocus(id, rect)
+    onDesktopFocus(id, rect, name, date)
   }
 
   // When focused on mobile: any click outside exits.
@@ -216,6 +231,49 @@ export default function VideoCard({
   // For non-origin cards: fly outward from origin center and fade.
   // For the origin card: translate to viewport center, then scale down.
   const transitionStyle = useMemo(() => {
+    // Desktop focus — click zooms the card to 80% of viewport height,
+    // centered, above the blur overlay (z-index 90 < 100).
+    if (phase === 'feed' && isDesktopFocused) {
+      const focusRect = desktopFocusRect ?? originalRectRef.current
+      if (focusRect) {
+        const cx = focusRect.left + focusRect.width / 2
+        const cy = focusRect.top + focusRect.height / 2
+        const dx = window.innerWidth / 2 - cx
+        const dy = window.innerHeight / 2 - cy
+        // 80% of window height, but never wider than 90% of the window.
+        const scale = Math.min(
+          (window.innerHeight * 0.8) / focusRect.height,
+          (window.innerWidth * 0.9) / focusRect.width,
+        )
+        const fixedFrame = {
+          position: 'fixed',
+          top: `${focusRect.top}px`,
+          left: `${focusRect.left}px`,
+          width: `${focusRect.width}px`,
+          height: `${focusRect.height}px`,
+        }
+        if (desktopFocusExiting) {
+          return {
+            ...fixedFrame,
+            transform: 'translate(0px, 0px) scale(1)',
+            borderRadius: '12px',
+            transition:
+              'transform 0.3s cubic-bezier(0.5, 0, 0, 1), border-radius 0.3s cubic-bezier(0.5, 0, 0, 1)',
+            zIndex: 100,
+          }
+        }
+        return {
+          ...fixedFrame,
+          transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+          // Divide by scale so the visual corner stays ~12px when scaled.
+          borderRadius: `${12 / scale}px`,
+          transition:
+            'transform 0.4s cubic-bezier(0.5, 0, 0, 1), border-radius 0.4s cubic-bezier(0.5, 0, 0, 1)',
+          zIndex: 100,
+        }
+      }
+    }
+
     // Mobile focus overlay — takes precedence over feed phase.
     if (phase === 'feed' && (isMobileFocused || isMobileFocusPrevious)) {
       const focusRect = mobileFocusRect ?? originalRectRef.current
@@ -366,16 +424,21 @@ export default function VideoCard({
     mobileFocusPhase,
     mobileFocusDirection,
     mobileFocusExiting,
+    isDesktopFocused,
+    desktopFocusRect,
+    desktopFocusExiting,
   ])
 
   const shellStyle = useMemo(() => {
-    if (phase !== 'feed' || !(isMobileFocused || isMobileFocusPrevious)) return undefined
-    const focusRect = mobileFocusRect ?? originalRectRef.current
+    if (phase !== 'feed') return undefined
+    if (!(isMobileFocused || isMobileFocusPrevious || isDesktopFocused)) return undefined
+    const focusRect =
+      (isDesktopFocused ? desktopFocusRect : mobileFocusRect) ?? originalRectRef.current
     if (!focusRect) return undefined
     return {
       height: `${focusRect.height}px`,
     }
-  }, [phase, isMobileFocused, isMobileFocusPrevious, mobileFocusRect])
+  }, [phase, isMobileFocused, isMobileFocusPrevious, mobileFocusRect, isDesktopFocused, desktopFocusRect])
 
   const cardStyle = {
     ...(transitionStyle ?? {}),
@@ -393,7 +456,7 @@ export default function VideoCard({
     >
       <div
         ref={cardRef}
-        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''}`}
+        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}

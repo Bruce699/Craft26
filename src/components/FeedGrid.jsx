@@ -3,10 +3,10 @@ import VideoCard from './VideoCard'
 import { feedColumns, mobileFeedColumns } from '../data/feedData'
 import './FeedGrid.css'
 
-const H_PADDING = 16
-const COL_GAP = 8
+const DEFAULT_H_PADDING = 48
+const DEFAULT_COL_GAP = 12
 const NUM_COLS = 3
-const TOP_OFFSET = 110
+const DEFAULT_TOP_OFFSET = 150
 
 const MOBILE_BREAKPOINT = 480
 const MOBILE_GAP = 4
@@ -36,15 +36,26 @@ export default function FeedGrid({
   mobileFocus = null,
   onMobileFocus,
   onExitMobileFocus,
+  desktopFocus = null,
+  onDesktopFocus,
 }) {
   const windowWidth = useWindowWidth(phase === 'feed')
 
+  const [gridOverrides, setGridOverrides] = useState({})
+
+  useEffect(() => {
+    const handler = (e) => setGridOverrides(e.detail)
+    window.addEventListener('dp-grid-update', handler)
+    return () => window.removeEventListener('dp-grid-update', handler)
+  }, [])
+
   const isMobile = windowWidth <= MOBILE_BREAKPOINT
   const columns = isMobile ? mobileFeedColumns : feedColumns
-  const gap = isMobile ? MOBILE_GAP : COL_GAP
-  const hPadding = isMobile ? MOBILE_GAP : H_PADDING
-  const topOffset = isMobile ? MOBILE_TOP_OFFSET : TOP_OFFSET
   const numCols = isMobile ? MOBILE_NUM_COLS : NUM_COLS
+
+  const gap = isMobile ? MOBILE_GAP : (gridOverrides.gap ?? DEFAULT_COL_GAP)
+  const hPadding = isMobile ? MOBILE_GAP : (gridOverrides.padding ?? DEFAULT_H_PADDING)
+  const topOffset = isMobile ? MOBILE_TOP_OFFSET : (gridOverrides.topOffset ?? DEFAULT_TOP_OFFSET)
 
   const columnWidth = (windowWidth - 2 * hPadding - (numCols - 1) * gap) / numCols
 
@@ -89,6 +100,11 @@ export default function FeedGrid({
                 mobileFocusExiting={mobileFocus?.exiting === true}
                 onMobileFocus={onMobileFocus}
                 onExitMobileFocus={onExitMobileFocus}
+                desktopFocusActive={!!desktopFocus}
+                isDesktopFocused={desktopFocus?.id === item.id}
+                desktopFocusRect={desktopFocus?.id === item.id ? desktopFocus.rect : null}
+                desktopFocusExiting={desktopFocus?.exiting === true}
+                onDesktopFocus={onDesktopFocus}
               />
             ))}
           </div>
