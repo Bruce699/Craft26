@@ -15,7 +15,6 @@ export const feedColumns = [
     { id: 'c1r8', playbackId: 'kUW1DHzuaQMcegeJI9sHXlGXxU00DxZH00YjaYsUFMOqg', name: 'Conceptual UI', date: 'January 2026' },
     { id: 'c1r9', playbackId: 'g59o3r8T005Q01GNj3Y00wXISpDM00FwVVPxi00Gx3EI1Qo4', name: 'AI Brush', date: 'October 2025' },
     { id: 'c1r10', playbackId: 'Mc47Cwar3gkxxixSkaWVvREWtzMpa89u6N02KNOal02wc', name: 'Generative Maze in VR', date: 'February 2025' },
-    { id: 'c1r11', playbackId: 'DizwOF9yw00s1YnBxHfnvebryIH00amrlX7YTlCsOrbJM', name: 'Media Preset', date: 'September 2025' },
   ],
   // Column 2
   [
@@ -28,6 +27,7 @@ export const feedColumns = [
     { id: 'c2r7', playbackId: '3JOGAkFHWi02xCaKKOK3LpeIDhvqIaMr8yYgrINmZakI', name: 'Bookmark Info Cards', date: 'September 2025' },
     { id: 'c2r8', playbackId: 'FA1OaJpIvpOcx1Q8y9apfRi8wDU011c302fk8XU6aParA', name: 'iOS Exit', date: 'August 2025' },
     { id: 'c2r9', playbackId: '01nPlGYjmGSakKAoHKgv5uxzD018RRfJGhCXjk9jMwmSo', name: 'Gaze Tracking in VR', date: 'March 2025' },
+    { id: 'c2r10', playbackId: 'DizwOF9yw00s1YnBxHfnvebryIH00amrlX7YTlCsOrbJM', name: 'Media Preset', date: 'September 2025' },
   ],
   // Column 3
   [
@@ -49,7 +49,7 @@ export const feedColumns = [
 const itemById = new Map(feedColumns.flat().map((item) => [item.id, item]))
 const mobileOrder = [
   // MC1 top → bottom
-  ['c3r3', 'c2r2', 'c1r2', 'c1r1', 'c3r4', 'c3r7', 'c1r4', 'c2r6', 'c3r5', 'c1r7', 'c1r8', 'c3r8', 'c2r8', 'c1r11', 'c3r10'],
+  ['c3r3', 'c2r2', 'c1r2', 'c1r1', 'c3r4', 'c3r7', 'c1r4', 'c2r6', 'c3r5', 'c1r7', 'c1r8', 'c3r8', 'c2r8', 'c2r10', 'c3r10'],
   // MC2 top → bottom
   ['c1r3', 'c1r5', 'c2r1', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5', 'c3r9', 'c1r10', 'c2r9'],
 ]

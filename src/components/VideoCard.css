@@ -1,6 +1,6 @@
 .video-card {
   position: relative;
-  border-radius: 8px;
+  border-radius: var(--dp-card-radius, 12px);
   overflow: hidden;
   background: #000;
   /* Prevent flex/block from adding extra space below the video */
@@ -47,7 +47,7 @@ body.is-mobile-focus-exiting .video-card {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px #eaeaea;
+  box-shadow: var(--dp-card-stroke, inset 0 0 0 1px #1c1c1c);
   pointer-events: none;
   z-index: 2;
   transition: opacity 0.3s cubic-bezier(0.5, 0, 0, 1);
@@ -57,6 +57,13 @@ body.is-mobile-focus-exiting .video-card {
 body.is-mobile-focus .video-card--mobile-focused::after,
 body.is-mobile-focus .video-card--mobile-focus-prev::after {
   opacity: 0;
+}
+
+/* Fade the stroke out on the desktop-focused card — matches the 0.4s
+   zoom-in and 0.3s zoom-out durations. */
+.video-card--desktop-focused::after {
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.5, 0, 0, 1);
 }
 
 /* Poster drives the card's intrinsic size; video overlays on top. */
@@ -106,19 +113,22 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
   right: 0;
   bottom: 0;
   width: 100%;
-  height: 41px;
+  height: var(--dp-hover-tag-height, 41px);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   box-shadow: 0px -2px 40px 0px rgba(0, 0, 0, 0.16);
-  background-color: #ebebeb;
+  background-color: var(--dp-hover-tag-bg, rgba(0, 0, 0, 0.75));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: visible;
   z-index: 1;
   border-radius: 0;
   line-height: 1.4;
   font-family: 'TWK Lausanne', system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--dp-hover-tag-font-size, 14px);
   font-weight: 300;
   opacity: 0;
   transform: translateY(100%);
@@ -130,6 +140,12 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
 
 /* Suppress the hover tag once we leave feed mode */
 body.is-dark .video-card__info {
+  display: none;
+}
+
+/* Suppress the hover tag on the desktop-focused card — it scales with the
+   card transform and would render comically large. */
+.video-card--desktop-focused .video-card__info {
   display: none;
 }
 
@@ -151,12 +167,12 @@ body.is-dark .video-card__info {
 }
 
 .video-card__name {
-  color: #2F2F30;
+  color: var(--dp-hover-tag-name-color, #f0f0f0);
   min-width: 0;
 }
 
 .video-card__date {
-  color: #949494;
+  color: var(--dp-hover-tag-date-color, #949494);
   flex-shrink: 0;
   margin-left: 8px;
 }

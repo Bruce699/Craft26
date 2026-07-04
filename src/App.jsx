@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import FeedGrid from './components/FeedGrid'
 import Nav from './components/Nav'
+import DesignPanel from './components/DesignPanel'
 import CoordinateScene from './coordinate/CoordinateScene'
 import { useCoordinatePoints } from './coordinate/useCoordinateData'
 import './App.css'
@@ -27,6 +28,8 @@ const MOBILE_BREAKPOINT = 480
 const MOBILE_FOCUS_TRANSITION_MS = 400
 const MOBILE_FOCUS_EXIT_MS = MOBILE_FOCUS_TRANSITION_MS
 
+const DESKTOP_FOCUS_EXIT_MS = 300
+
 export default function App() {
   const [phase, setPhase] = useState('feed')
   const [originId, setOriginId] = useState(null)
@@ -34,6 +37,8 @@ export default function App() {
   const [sceneZoom, setSceneZoom] = useState(1)
   // { id, rect, exiting } — mobile focus overlay (tap a card to enlarge it)
   const [mobileFocus, setMobileFocus] = useState(null)
+  // { id, rect, exiting } — desktop focus (click a card to zoom it to 80vh)
+  const [desktopFocus, setDesktopFocus] = useState(null)
   const mobileFocusScrollLockRef = useRef(0)
   const [isMobile, setIsMobile] = useState(
     () => document.documentElement.clientWidth <= MOBILE_BREAKPOINT,
@@ -85,6 +90,27 @@ export default function App() {
   const exitMobileFocus = useCallback(() => {
     setMobileFocus((f) => (f && !f.exiting ? { ...f, exiting: true } : f))
   }, [])
+
+  const handleDesktopFocus = useCallback((id, rect, name, date) => {
+    if (isMobile || phase !== 'feed') return
+    setDesktopFocus({ id, rect, name, date, exiting: false })
+  }, [isMobile, phase])
+
+  const exitDesktopFocus = useCallback(() => {
+    setDesktopFocus((f) => (f && !f.exiting ? { ...f, exiting: true } : f))
+  }, [])
+
+  useEffect(() => {
+    if (!desktopFocus || !desktopFocus.exiting) return
+    const t = setTimeout(() => setDesktopFocus(null), DESKTOP_FOCUS_EXIT_MS)
+    return () => clearTimeout(t)
+  }, [desktopFocus])
+
+  // Lock page scroll while a card is desktop-focused so the fixed-position
+  // card still lines up with its grid slot when it returns.
+  useEffect(() => {
+    document.body.classList.toggle('is-desktop-focus', !!desktopFocus)
+  }, [desktopFocus])
 
   useEffect(() => {
     if (!mobileFocus || !mobileFocus.exiting) return
@@ -232,7 +258,45 @@ export default function App() {
         mobileFocus={mobileFocus}
         onMobileFocus={handleMobileFocus}
         onExitMobileFocus={exitMobileFocus}
+        desktopFocus={desktopFocus}
+        onDesktopFocus={handleDesktopFocus}
       />
+      {desktopFocus && (
+        <div
+          className={`desktop-focus-overlay${desktopFocus.exiting ? ' desktop-focus-overlay--exiting' : ''}`}
+          onClick={exitDesktopFocus}
+        />
+      )}
+      {desktopFocus && (() => {
+        const r = desktopFocus.rect
+        const scale = Math.min(
+          (window.innerHeight * 0.8) / r.height,
+          (window.innerWidth * 0.9) / r.width,
+        )
+        const visualWidth = r.width * scale
+        const visualHeight = r.height * scale
+        const visualLeft = (window.innerWidth - visualWidth) / 2
+        const visualBottom = (window.innerHeight + visualHeight) / 2
+        const exitingCls = desktopFocus.exiting ? ' desktop-focus-label--exiting' : ''
+        return (
+          <div
+            className={`desktop-focus-labels${desktopFocus.exiting ? ' desktop-focus-labels--exiting' : ''}`}
+            style={{
+              left: `${visualLeft}px`,
+              top: `${visualBottom + 12}px`,
+              width: `${visualWidth}px`,
+            }}
+          >
+            <span className={`desktop-focus-label desktop-focus-label--name${exitingCls}`}>
+              {desktopFocus.name}
+            </span>
+            <span className={`desktop-focus-label desktop-focus-label--date${exitingCls}`}>
+              {desktopFocus.date}
+            </span>
+          </div>
+        )
+      })()}
+      <DesignPanel />
       {showScene && (
         <CoordinateScene
           points={points}

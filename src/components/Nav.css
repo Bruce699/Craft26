@@ -9,12 +9,12 @@
   align-items: center;
   padding: 6px 16px;
   gap: 24px;
-  background: #EAEAEA;
-  border-radius: 49px;
+  background: var(--dp-nav-bg, #1c1c1c);
+  border-radius: var(--dp-nav-radius, 8px);
   z-index: 10;
   font-family: 'TWK Lausanne', system-ui, sans-serif;
   font-weight: 350;
-  font-size: 14px;
+  font-size: var(--dp-nav-font-size, 14px);
   line-height: 16px;
   transition:
     opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
@@ -38,13 +38,13 @@ body.is-mobile-focus-exiting .nav-pill {
 }
 
 .nav-pill__link {
-  color: #949494;
+  color: var(--dp-nav-link-color, #404040);
   text-decoration: none;
   font-weight: 250;
 }
 
 .nav-pill__current {
-  color: #F83F01;
+  color: var(--dp-nav-active-color, #f0f0f0);
 }
 
 .nav-pill > :nth-child(1) {
