@@ -76,10 +76,11 @@ export default function FeedGrid({
             className="feed-grid__column"
             style={{ width: columnWidth, gap }}
           >
-            {column.map((item) => (
+            {column.map((item, rowIndex) => (
               <VideoCard
                 key={item.id}
                 id={item.id}
+                entranceIndex={rowIndex * numCols + colIndex}
                 playbackId={item.playbackId}
                 name={item.name}
                 date={item.date}

@@ -1,14 +1,20 @@
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import '@mux/mux-video'
 import './VideoCard.css'
 
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
 
-const MOBILE_FOCUS_GAP = 4
+const MOBILE_FOCUS_SIDE_INSET = 4
+const MOBILE_FOCUS_RADIUS = 12
+const MOBILE_FOCUS_TRANSITION_MS = 340
+const MOBILE_DRAG_FRICTION = 280
+const MOBILE_DRAG_SCALE_DISTANCE = 260
+const MOBILE_DRAG_EXIT_DISTANCE = 56
 
 export default function VideoCard({
   id,
+  entranceIndex = 0,
   playbackId,
   name,
   date,
@@ -38,8 +44,20 @@ export default function VideoCard({
   const rootRef = useRef(null)
   const cardRef = useRef(null)
   const originalRectRef = useRef(null)
+  const initiallyInViewportRef = useRef(false)
+  const entranceTimerRef = useRef(0)
+  const dragStartRef = useRef({ x: 0, y: 0 })
+  const dragMovedRef = useRef(false)
   const [isVisible, setIsVisible] = useState(false)
   const [posterLoaded, setPosterLoaded] = useState(false)
+  const [entryState, setEntryState] = useState('pending')
+  const [entryOffset, setEntryOffset] = useState('100vh')
+  const [mobileDrag, setMobileDrag] = useState({
+    x: 0,
+    y: 0,
+    progress: 0,
+    dragging: false,
+  })
   const [videoReady, setVideoReady] = useState(false)
   const [videoAspectRatio, setVideoAspectRatio] = useState(null)
   const isVideoSizedCard = id === 'c3r1'
@@ -49,10 +67,66 @@ export default function VideoCard({
     const cy = rect.top + rect.height / 2
     const dx = window.innerWidth / 2 - cx
     const dy = window.innerHeight / 2 - cy
-    const targetWidth = window.innerWidth - MOBILE_FOCUS_GAP * 2
+    const targetWidth = window.innerWidth - MOBILE_FOCUS_SIDE_INSET * 2
     const scale = targetWidth / rect.width
     return { dx, dy, scale }
   }
+
+  const resetMobileDrag = useCallback(() => {
+    setMobileDrag({ x: 0, y: 0, progress: 0, dragging: false })
+  }, [])
+
+  const applyMobileDrag = useCallback((rawX, rawY, dragging) => {
+    const distance = Math.hypot(rawX, rawY)
+    const frictionScale = 1 / (1 + distance / MOBILE_DRAG_FRICTION)
+    const x = rawX * frictionScale
+    const y = rawY * frictionScale
+    const easedDistance = Math.hypot(x, y)
+    const progress = Math.min(easedDistance / MOBILE_DRAG_SCALE_DISTANCE, 1)
+
+    setMobileDrag({ x, y, progress, dragging })
+  }, [])
+
+  useEffect(() => {
+    if (!isMobile || !isMobileFocused || mobileFocusExiting) return
+    const overlayStrength = 1 - mobileDrag.progress
+    document.documentElement.style.setProperty(
+      '--mobile-focus-overlay-opacity',
+      String(0.85 * overlayStrength),
+    )
+    document.documentElement.style.setProperty(
+      '--mobile-focus-overlay-blur',
+      `${24 * overlayStrength}px`,
+    )
+    document.documentElement.style.setProperty(
+      '--mobile-focus-overlay-transition',
+      mobileDrag.dragging
+        ? 'none'
+        : 'background 0.34s cubic-bezier(0.5, 0, 0, 1), backdrop-filter 0.34s cubic-bezier(0.5, 0, 0, 1)',
+    )
+    document.documentElement.style.setProperty(
+      '--mobile-focus-label-opacity',
+      mobileDrag.dragging || mobileDrag.progress > 0 ? '0' : '1',
+    )
+    document.documentElement.style.setProperty(
+      '--mobile-focus-label-blur',
+      mobileDrag.dragging || mobileDrag.progress > 0 ? '8px' : '0px',
+    )
+
+    return () => {
+      document.documentElement.style.removeProperty('--mobile-focus-overlay-opacity')
+      document.documentElement.style.removeProperty('--mobile-focus-overlay-blur')
+      document.documentElement.style.removeProperty('--mobile-focus-overlay-transition')
+      document.documentElement.style.removeProperty('--mobile-focus-label-opacity')
+      document.documentElement.style.removeProperty('--mobile-focus-label-blur')
+    }
+  }, [isMobile, isMobileFocused, mobileFocusExiting, mobileDrag.dragging, mobileDrag.progress])
+
+  useEffect(() => {
+    if (isMobileFocused && !mobileFocusExiting) return
+    resetMobileDrag()
+    dragMovedRef.current = false
+  }, [isMobileFocused, mobileFocusExiting, resetMobileDrag])
 
   // Reveal the card (fade + slight upward motion) only after the poster img
   // below has actually rendered. Double rAF guarantees the hidden initial
@@ -63,6 +137,49 @@ export default function VideoCard({
       requestAnimationFrame(() => setPosterLoaded(true))
     })
   }
+
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    initiallyInViewportRef.current = rect.top < window.innerHeight && rect.bottom > 0
+  }, [])
+
+  useEffect(() => {
+    if (phase !== 'feed' || !posterLoaded || entryState !== 'pending') return
+    const el = rootRef.current
+    if (!el) return
+
+    const startEntry = () => {
+      if (entryState !== 'pending') return
+      const rect = el.getBoundingClientRect()
+      const offset = initiallyInViewportRef.current
+        ? 150
+        : Math.max(window.innerHeight + rect.height - rect.top, rect.height)
+      const delay = initiallyInViewportRef.current ? entranceIndex * 60 : 0
+
+      setEntryOffset(`${offset}px`)
+      entranceTimerRef.current = window.setTimeout(() => {
+        requestAnimationFrame(() => setEntryState('visible'))
+      }, delay)
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting || entry.boundingClientRect.top <= window.innerHeight) {
+          observer.disconnect()
+          startEntry()
+        }
+      },
+      { root: null, rootMargin: '0px', threshold: 0 },
+    )
+
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(entranceTimerRef.current)
+    }
+  }, [phase, posterLoaded, entryState, entranceIndex])
 
   // Snapshot the card's viewport rect while it's still in normal feed layout.
   // Once transforms kick in, getBoundingClientRect would return the *moved*
@@ -189,13 +306,17 @@ export default function VideoCard({
   }
 
   const handleClick = () => {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false
+      return
+    }
     if (phase !== 'feed') return
     if (isMobile) {
       if (isMobileFocused) return
       if (!onMobileFocus) return
       const rect = cardRef.current?.getBoundingClientRect()
       if (!rect) return
-      onMobileFocus(id, rect)
+      onMobileFocus(id, rect, name, date)
       return
     }
     if (isDesktopFocused || desktopFocusActive) return
@@ -203,6 +324,38 @@ export default function VideoCard({
     const rect = cardRef.current?.getBoundingClientRect()
     if (!rect) return
     onDesktopFocus(id, rect, name, date)
+  }
+
+  const handlePointerDown = (event) => {
+    if (!isMobile || !isMobileFocused || mobileFocusExiting || mobileFocusPhase !== 'idle') return
+    dragStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    }
+    dragMovedRef.current = false
+    setMobileDrag((drag) => ({ ...drag, dragging: true }))
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+
+  const handlePointerMove = (event) => {
+    if (!mobileDrag.dragging) return
+    const rawX = event.clientX - dragStartRef.current.x
+    const rawY = event.clientY - dragStartRef.current.y
+    if (Math.hypot(rawX, rawY) > 4) dragMovedRef.current = true
+    applyMobileDrag(rawX, rawY, true)
+  }
+
+  const handlePointerEnd = (event) => {
+    if (!mobileDrag.dragging) return
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+    const distance = Math.hypot(mobileDrag.x, mobileDrag.y)
+    if (distance >= MOBILE_DRAG_EXIT_DISTANCE) {
+      resetMobileDrag()
+      dragMovedRef.current = false
+      onExitMobileFocus?.()
+      return
+    }
+    resetMobileDrag()
   }
 
   // When focused on mobile: any click outside exits.
@@ -280,8 +433,14 @@ export default function VideoCard({
       if (!focusRect) return null
       const { dx, dy, scale } = getMobileFocusTransform(focusRect)
       const commonTransition =
-        'transform 0.4s cubic-bezier(0.5, 0, 0, 1), border-radius 0.4s cubic-bezier(0.5, 0, 0, 1)'
-      const centeredTransform = `translate(${dx}px, ${dy}px) scale(${scale})`
+        `transform ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1), border-radius ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1)`
+      const dragTransition = mobileDrag.dragging ? 'none' : commonTransition
+      const activeScale = isMobileFocused
+        ? 1 + (scale - 1) * (1 - mobileDrag.progress)
+        : scale
+      const activeDx = dx + (isMobileFocused ? mobileDrag.x : 0)
+      const activeDy = dy + (isMobileFocused ? mobileDrag.y : 0)
+      const centeredTransform = `translate(${activeDx}px, ${activeDy}px) scale(${activeScale})`
       const fixedFrame = {
         position: 'fixed',
         top: `${focusRect.top}px`,
@@ -296,7 +455,7 @@ export default function VideoCard({
         return {
           ...fixedFrame,
           transform: mobileFocusPhase === 'anim' ? outgoingTransform : centeredTransform,
-          borderRadius: `${4 / scale}px`,
+          borderRadius: `${MOBILE_FOCUS_RADIUS / scale}px`,
           transition: mobileFocusPhase === 'anim' ? commonTransition : 'none',
           zIndex: 99,
           pointerEvents: 'none',
@@ -317,7 +476,7 @@ export default function VideoCard({
           ...fixedFrame,
           transform:
             `translate(${dx + mobileFocusDirection * window.innerWidth}px, ${dy}px) scale(${scale})`,
-          borderRadius: `${4 / scale}px`,
+          borderRadius: `${MOBILE_FOCUS_RADIUS / scale}px`,
           transition: 'none',
           zIndex: 100,
         }
@@ -325,10 +484,11 @@ export default function VideoCard({
       return {
         ...fixedFrame,
         transform: centeredTransform,
-        // Divide by scale so the visual corner is ~4px after the transform.
-        borderRadius: `${4 / scale}px`,
-        transition: commonTransition,
+        // Divide by scale so the visual corner remains stable after transform scaling.
+        borderRadius: `${MOBILE_FOCUS_RADIUS / activeScale}px`,
+        transition: dragTransition,
         zIndex: 100,
+        touchAction: 'none',
       }
     }
 
@@ -424,6 +584,7 @@ export default function VideoCard({
     mobileFocusPhase,
     mobileFocusDirection,
     mobileFocusExiting,
+    mobileDrag,
     isDesktopFocused,
     desktopFocusRect,
     desktopFocusExiting,
@@ -441,6 +602,7 @@ export default function VideoCard({
   }, [phase, isMobileFocused, isMobileFocusPrevious, mobileFocusRect, isDesktopFocused, desktopFocusRect])
 
   const cardStyle = {
+    '--entry-offset': entryOffset,
     ...(transitionStyle ?? {}),
     ...(isVideoSizedCard && videoAspectRatio
       ? { aspectRatio: String(videoAspectRatio) }
@@ -456,9 +618,13 @@ export default function VideoCard({
     >
       <div
         ref={cardRef}
-        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''}`}
+        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
         style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}
       >
         <img

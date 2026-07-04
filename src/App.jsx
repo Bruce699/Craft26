@@ -25,7 +25,7 @@ const ORIGIN_WIDTH_RATIO = 120 / 1200
 const DARK_PHASES = new Set(['exploding', 'centering', 'coordinate', 'uncentering'])
 
 const MOBILE_BREAKPOINT = 480
-const MOBILE_FOCUS_TRANSITION_MS = 400
+const MOBILE_FOCUS_TRANSITION_MS = 340
 const MOBILE_FOCUS_EXIT_MS = MOBILE_FOCUS_TRANSITION_MS
 
 const DESKTOP_FOCUS_EXIT_MS = 300
@@ -74,11 +74,13 @@ export default function App() {
     }
   }, [phase, originId])
 
-  const handleMobileFocus = useCallback((id, rect) => {
+  const handleMobileFocus = useCallback((id, rect, name, date) => {
     if (!isMobile || phase !== 'feed') return
     setMobileFocus({
       id,
       rect,
+      name,
+      date,
       scrollY: window.scrollY,
       exiting: false,
       previousId: null,
@@ -137,6 +139,7 @@ export default function App() {
   }, [mobileFocus])
 
   const mobileFocusVisible = phase === 'feed' && !!mobileFocus
+  const showMobileFocusOverlay = mobileFocusVisible && isMobile
 
   useEffect(() => {
     document.body.classList.toggle(
@@ -261,6 +264,47 @@ export default function App() {
         desktopFocus={desktopFocus}
         onDesktopFocus={handleDesktopFocus}
       />
+      {showMobileFocusOverlay && (
+        <div
+          className={`mobile-focus-overlay${mobileFocus.exiting ? ' mobile-focus-overlay--exiting' : ''}`}
+          onClick={exitMobileFocus}
+        />
+      )}
+      {showMobileFocusOverlay && (() => {
+        const r = mobileFocus.rect
+        const scale = (window.innerWidth - 8) / r.width
+        const visualWidth = r.width * scale
+        const visualHeight = r.height * scale
+        const visualLeft = (window.innerWidth - visualWidth) / 2
+        const visualTop = (window.innerHeight - visualHeight) / 2
+        const exitingCls = mobileFocus.exiting ? ' mobile-focus-label--exiting' : ''
+        return (
+          <>
+            <div
+              className={`mobile-focus-label mobile-focus-label--name${exitingCls}`}
+              style={{
+                left: '50%',
+                bottom: `${window.innerHeight - visualTop + 20}px`,
+                width: `${visualWidth}px`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              {mobileFocus.name}
+            </div>
+            <div
+              className={`mobile-focus-label mobile-focus-label--date${exitingCls}`}
+              style={{
+                left: '50%',
+                top: `${visualTop + visualHeight + 20}px`,
+                width: `${visualWidth}px`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              {mobileFocus.date}
+            </div>
+          </>
+        )
+      })()}
       {desktopFocus && (
         <div
           className={`desktop-focus-overlay${desktopFocus.exiting ? ' desktop-focus-overlay--exiting' : ''}`}

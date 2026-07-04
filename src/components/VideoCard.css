@@ -6,19 +6,20 @@
   cursor: pointer;
   /* Prevent flex/block from adding extra space below the video */
   line-height: 0;
-  /* Hidden until the poster has loaded; then fade + slide up. */
+  /* Hidden until the poster has loaded and the card reaches the viewport. */
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(var(--entry-offset, 100vh)) scale(0.6);
+  transform-origin: center center;
   transition:
-    opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
-    transform 0.3s cubic-bezier(0.5, 0, 0, 1),
-    filter 0.3s cubic-bezier(0.5, 0, 0, 1);
+    opacity 0.6s linear,
+    transform 0.6s cubic-bezier(0.5, 0, 0, 1),
+    filter 0.4s cubic-bezier(0.5, 0, 0, 1);
 }
 
 /* Dim + blur every other card while one is focused on mobile. */
 body.is-mobile-focus .video-card:not(.video-card--mobile-focused):not(.video-card--mobile-focus-prev) {
-  opacity: 0.5;
-  filter: blur(40px);
+  opacity: 1;
+  filter: none;
   pointer-events: none;
 }
 
@@ -31,14 +32,23 @@ body.is-mobile-focus-exiting .video-card:not(.video-card--mobile-focused):not(.v
 /* During exit, keep the same 0.3s duration + curve as enter. */
 body.is-mobile-focus-exiting .video-card {
   transition:
-    opacity 0.4s cubic-bezier(0.5, 0, 0, 1),
-    transform 0.4s cubic-bezier(0.5, 0, 0, 1),
-    filter 0.4s cubic-bezier(0.5, 0, 0, 1);
+    opacity 0.34s cubic-bezier(0.5, 0, 0, 1),
+    transform 0.34s cubic-bezier(0.5, 0, 0, 1),
+    filter 0.34s cubic-bezier(0.5, 0, 0, 1);
 }
 
-.video-card--loaded {
+.video-card--entry-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+}
+
+@media (max-width: 480px) {
+  .video-card {
+    transition:
+      opacity 0.51s linear,
+      transform 0.51s cubic-bezier(0.5, 0, 0, 1),
+      filter 0.34s cubic-bezier(0.5, 0, 0, 1);
+  }
 }
 
 /* Inner outline as a pseudo-element so it never affects layout size.

@@ -18,6 +18,75 @@ html:has(body.is-mobile-focus-exiting) {
   overscroll-behavior: none;
 }
 
+.mobile-focus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, var(--mobile-focus-overlay-opacity, 0.85));
+  backdrop-filter: blur(var(--mobile-focus-overlay-blur, 24px));
+  -webkit-backdrop-filter: blur(var(--mobile-focus-overlay-blur, 24px));
+  transition: var(
+    --mobile-focus-overlay-transition,
+    background 0.34s cubic-bezier(0.5, 0, 0, 1),
+    backdrop-filter 0.34s cubic-bezier(0.5, 0, 0, 1)
+  );
+}
+
+.mobile-focus-overlay--exiting {
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  pointer-events: none;
+}
+
+.mobile-focus-label {
+  position: fixed;
+  z-index: 100;
+  font-family: 'TWK Lausanne', system-ui, sans-serif;
+  line-height: 1.4;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  pointer-events: none;
+  opacity: var(--mobile-focus-label-opacity, 1);
+  filter: blur(var(--mobile-focus-label-blur, 0));
+  animation: mobile-focus-label-in 0.4s cubic-bezier(0.5, 0, 0, 1);
+  transition:
+    opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
+    filter 0.3s cubic-bezier(0.5, 0, 0, 1);
+}
+
+.mobile-focus-label--name {
+  color: #f0f0f0;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.mobile-focus-label--date {
+  color: #949494;
+  opacity: 0.6;
+  font-size: 16px;
+  font-weight: 300;
+}
+
+.mobile-focus-label--exiting {
+  opacity: 0;
+  filter: blur(8px);
+}
+
+@keyframes mobile-focus-label-in {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+  }
+  to {
+    opacity: var(--mobile-focus-label-opacity, 1);
+    filter: blur(var(--mobile-focus-label-blur, 0));
+  }
+}
+
 /* In dark mode we go fullscreen — release the reserved scrollbar gutter
    so the coord scene canvas (position: fixed) can span the full viewport
    and its axes align with the centered origin card. */
