@@ -29,8 +29,18 @@ const MOBILE_FOCUS_TRANSITION_MS = 340
 const MOBILE_FOCUS_EXIT_MS = MOBILE_FOCUS_TRANSITION_MS
 
 const DESKTOP_FOCUS_EXIT_MS = 300
+const ABOUT_LOGO_EXIT_DISTANCE = 40
+const ABOUT_LOGO_FRICTION = 0.9
+const ABOUT_LOGO_ROTATION_FORCE = 0.0675
+const ABOUT_LOGO_ROTATION_DAMPING = 0.9
+const ABOUT_LOGO_ROTATION_RETURN = 0.015
+
+function getInitialPage() {
+  return window.location.hash === '#about' ? 'about' : 'craft'
+}
 
 export default function App() {
+  const [page, setPage] = useState(getInitialPage)
   const [phase, setPhase] = useState('feed')
   const [originId, setOriginId] = useState(null)
   const [originRect, setOriginRect] = useState(null)
@@ -39,7 +49,16 @@ export default function App() {
   const [mobileFocus, setMobileFocus] = useState(null)
   // { id, rect, exiting } — desktop focus (click a card to zoom it to 80vh)
   const [desktopFocus, setDesktopFocus] = useState(null)
+  const [aboutLogo, setAboutLogo] = useState(null)
   const mobileFocusScrollLockRef = useRef(0)
+  const aboutLogoRef = useRef(null)
+  const aboutLogoTargetRef = useRef({ x: 0, y: 0 })
+  const aboutLogoPositionRef = useRef({ x: 0, y: 0 })
+  const aboutLogoRotationRef = useRef(0)
+  const aboutLogoRotationVelocityRef = useRef(0)
+  const aboutLogoLastCursorXRef = useRef(0)
+  const aboutLogoBoundsRef = useRef(null)
+  const aboutLogoRafRef = useRef(0)
   const [isMobile, setIsMobile] = useState(
     () => document.documentElement.clientWidth <= MOBILE_BREAKPOINT,
   )
@@ -49,6 +68,95 @@ export default function App() {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  useEffect(() => {
+    const onHashChange = () => setPage(getInitialPage())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  const hideAboutLogo = useCallback(() => {
+    aboutLogoRotationVelocityRef.current = 0
+    document.body.classList.remove('is-about-logo-hover')
+    setAboutLogo((logo) => (logo ? { ...logo, visible: false } : logo))
+  }, [])
+
+  const showAboutLogo = useCallback((event, logo) => {
+    if (isMobile) return
+    const x = event.clientX
+    const y = event.clientY
+    aboutLogoTargetRef.current = { x, y }
+    aboutLogoPositionRef.current = { x, y }
+    aboutLogoRotationRef.current = 0
+    aboutLogoRotationVelocityRef.current = 0
+    aboutLogoLastCursorXRef.current = x
+    aboutLogoBoundsRef.current = event.currentTarget.getBoundingClientRect()
+    document.body.classList.add('is-about-logo-hover')
+    setAboutLogo({ ...logo, x, y, visible: true })
+  }, [isMobile])
+
+  const handleAboutLogoMove = useCallback((event) => {
+    if (isMobile || !aboutLogoBoundsRef.current) return
+    const x = event.clientX
+    const y = event.clientY
+    const deltaX = x - aboutLogoLastCursorXRef.current
+    aboutLogoLastCursorXRef.current = x
+    aboutLogoTargetRef.current = { x, y }
+    aboutLogoRotationVelocityRef.current += deltaX * ABOUT_LOGO_ROTATION_FORCE
+
+    const rect = aboutLogoBoundsRef.current
+    const dx = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0
+    const dy = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0
+    if (Math.hypot(dx, dy) > ABOUT_LOGO_EXIT_DISTANCE) hideAboutLogo()
+  }, [hideAboutLogo, isMobile])
+
+  useEffect(() => {
+    if (!aboutLogo) return
+    let running = true
+
+    const tick = () => {
+      const el = aboutLogoRef.current
+      const pos = aboutLogoPositionRef.current
+      const target = aboutLogoTargetRef.current
+      pos.x += (target.x - pos.x) * ABOUT_LOGO_FRICTION
+      pos.y += (target.y - pos.y) * ABOUT_LOGO_FRICTION
+      aboutLogoPositionRef.current = pos
+      aboutLogoRotationRef.current += aboutLogoRotationVelocityRef.current
+      aboutLogoRotationVelocityRef.current *= ABOUT_LOGO_ROTATION_DAMPING
+      aboutLogoRotationRef.current +=
+        (0 - aboutLogoRotationRef.current) * ABOUT_LOGO_ROTATION_RETURN
+
+      if (el) {
+        el.style.setProperty('--about-logo-x', `${pos.x}px`)
+        el.style.setProperty('--about-logo-y', `${pos.y}px`)
+        el.style.setProperty('--about-logo-rotation', `${aboutLogoRotationRef.current}deg`)
+      }
+      if (running) aboutLogoRafRef.current = requestAnimationFrame(tick)
+    }
+
+    aboutLogoRafRef.current = requestAnimationFrame(tick)
+    return () => {
+      running = false
+      cancelAnimationFrame(aboutLogoRafRef.current)
+    }
+  }, [aboutLogo])
+
+  useEffect(() => {
+    if (!aboutLogo) return undefined
+    if (aboutLogo.visible) return undefined
+    const t = setTimeout(() => setAboutLogo(null), 400)
+    return () => clearTimeout(t)
+  }, [aboutLogo])
+
+  useEffect(() => {
+    if (!aboutLogo?.visible || isMobile) return undefined
+    window.addEventListener('mousemove', handleAboutLogoMove)
+    window.addEventListener('blur', hideAboutLogo)
+    return () => {
+      window.removeEventListener('mousemove', handleAboutLogoMove)
+      window.removeEventListener('blur', hideAboutLogo)
+    }
+  }, [aboutLogo, handleAboutLogoMove, hideAboutLogo, isMobile])
 
   const points = useCoordinatePoints()
   // Target pixel width of the centered origin item (and every coordinate thumbnail)
@@ -138,7 +246,8 @@ export default function App() {
     return () => clearTimeout(t)
   }, [mobileFocus])
 
-  const mobileFocusVisible = phase === 'feed' && !!mobileFocus
+  const isAboutPage = page === 'about'
+  const mobileFocusVisible = phase === 'feed' && !isAboutPage && !!mobileFocus
   const showMobileFocusOverlay = mobileFocusVisible && isMobile
 
   useEffect(() => {
@@ -250,20 +359,67 @@ export default function App() {
 
   return (
     <>
-      {phase === 'feed' && <Nav />}
-      <FeedGrid
-        phase={phase}
-        originId={originId}
-        originRect={originRect}
-        originTargetWidth={originTargetWidth}
-        sceneZoom={sceneZoom}
-        onItemDoubleClick={handleItemDoubleClick}
-        mobileFocus={mobileFocus}
-        onMobileFocus={handleMobileFocus}
-        onExitMobileFocus={exitMobileFocus}
-        desktopFocus={desktopFocus}
-        onDesktopFocus={handleDesktopFocus}
-      />
+      {phase === 'feed' && <Nav currentPage={page} />}
+      {isAboutPage ? (
+        <main className="about-page">
+          <img className="about-page__photo" src="/Myself.png" alt="" />
+          <p className="about-page__copy">
+            I’m Bruce Cao. I’m currently designing at<br />
+            <a
+              className="about-page__link"
+              href="https://design.google/"
+              onMouseEnter={(event) => showAboutLogo(event, { src: '/Google.png', alt: 'Google' })}
+              onMouseMove={handleAboutLogoMove}
+            >
+              Google
+            </a>. I will be joining the{' '}
+            <a
+              className="about-page__link"
+              href="https://shopify.design"
+              onMouseEnter={(event) => showAboutLogo(event, { src: '/Shopify.png', alt: 'Shopify' })}
+              onMouseMove={handleAboutLogoMove}
+            >
+              Product Design
+            </a>
+            <br />
+            <a
+              className="about-page__link"
+              href="https://shopify.design"
+              onMouseEnter={(event) => showAboutLogo(event, { src: '/Shopify.png', alt: 'Shopify' })}
+              onMouseMove={handleAboutLogoMove}
+            >
+              Studio at Shopify
+            </a>{' '}
+            in Fall 2026.
+          </p>
+          {aboutLogo && (
+            <div
+              ref={aboutLogoRef}
+              className={`about-page__logo${aboutLogo.visible ? ' about-page__logo--visible' : ''}`}
+              style={{
+                '--about-logo-x': `${aboutLogo.x}px`,
+                '--about-logo-y': `${aboutLogo.y}px`,
+              }}
+            >
+              <img src={aboutLogo.src} alt={aboutLogo.alt} />
+            </div>
+          )}
+        </main>
+      ) : (
+        <FeedGrid
+          phase={phase}
+          originId={originId}
+          originRect={originRect}
+          originTargetWidth={originTargetWidth}
+          sceneZoom={sceneZoom}
+          onItemDoubleClick={handleItemDoubleClick}
+          mobileFocus={mobileFocus}
+          onMobileFocus={handleMobileFocus}
+          onExitMobileFocus={exitMobileFocus}
+          desktopFocus={desktopFocus}
+          onDesktopFocus={handleDesktopFocus}
+        />
+      )}
       {showMobileFocusOverlay && (
         <div
           className={`mobile-focus-overlay${mobileFocus.exiting ? ' mobile-focus-overlay--exiting' : ''}`}
@@ -340,8 +496,8 @@ export default function App() {
           </div>
         )
       })()}
-      <DesignPanel />
-      {showScene && (
+      {!isAboutPage && <DesignPanel />}
+      {!isAboutPage && showScene && (
         <CoordinateScene
           points={points}
           originId={originId}

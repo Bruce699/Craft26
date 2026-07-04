@@ -16,6 +16,15 @@
        url('/fonts/TWKLausanne-350.woff') format('woff');
 }
 
+@font-face {
+  font-family: 'TWK Lausanne';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/TWKLausanne-400.woff2') format('woff2'),
+       url('/fonts/TWKLausanne-400.woff') format('woff');
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;

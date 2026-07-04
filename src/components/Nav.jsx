@@ -1,6 +1,6 @@
 import './Nav.css'
 
-export default function Nav() {
+export default function Nav({ currentPage = 'craft' }) {
   return (
     <nav className="nav-pill">
       <a
@@ -11,8 +11,16 @@ export default function Nav() {
       >
         Work
       </a>
-      <span className="nav-pill__current">Craft</span>
-      <a className="nav-pill__link" href="#">
+      <a
+        className={currentPage === 'craft' ? 'nav-pill__current' : 'nav-pill__link'}
+        href="#craft"
+      >
+        Craft
+      </a>
+      <a
+        className={currentPage === 'about' ? 'nav-pill__current' : 'nav-pill__link'}
+        href="#about"
+      >
         About
       </a>
     </nav>

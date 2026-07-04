@@ -11,7 +11,7 @@ const DEFAULTS = {
   navBgOpacity: 100,
   navRadius: 8,
   navLinkColor: '#404040',
-  navActiveColor: '#f0f0f0',
+  navActiveColor: '#d8d8d8',
   navFontSize: 14,
   gridGap: 12,
   gridPadding: 48,

@@ -1,5 +1,5 @@
 .nav-pill {
-  position: absolute;
+  position: fixed;
   top: 40px;
   left: 50%;
   transform: translateX(-50%);
@@ -43,8 +43,13 @@ body.is-mobile-focus-exiting .nav-pill {
   font-weight: 250;
 }
 
-.nav-pill__current {
-  color: var(--dp-nav-active-color, #f0f0f0);
+.nav-pill__current,
+.nav-pill__current:link,
+.nav-pill__current:visited,
+.nav-pill__current:hover,
+.nav-pill__current:active {
+  color: var(--dp-nav-active-color, #d8d8d8);
+  text-decoration: none;
 }
 
 .nav-pill > :nth-child(1) {
