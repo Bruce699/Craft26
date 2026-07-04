@@ -2,7 +2,7 @@ import './Nav.css'
 
 export default function Nav({ currentPage = 'craft' }) {
   return (
-    <nav className="nav-pill">
+    <nav className={`nav-pill ${currentPage === 'about' ? 'nav-pill--fixed' : ''}`}>
       <a
         className="nav-pill__link"
         href="https://bruce-cao.com"

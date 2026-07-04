@@ -1,5 +1,5 @@
 .nav-pill {
-  position: fixed;
+  position: absolute;
   top: 40px;
   left: 50%;
   transform: translateX(-50%);
@@ -19,6 +19,10 @@
   transition:
     opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
     filter 0.3s cubic-bezier(0.5, 0, 0, 1);
+}
+
+.nav-pill--fixed {
+  position: fixed;
 }
 
 body.is-mobile-focus .nav-pill,

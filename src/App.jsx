@@ -29,11 +29,12 @@ const MOBILE_FOCUS_TRANSITION_MS = 340
 const MOBILE_FOCUS_EXIT_MS = MOBILE_FOCUS_TRANSITION_MS
 
 const DESKTOP_FOCUS_EXIT_MS = 300
-const ABOUT_LOGO_EXIT_DISTANCE = 40
+const ABOUT_LOGO_EXIT_DISTANCE = 60
 const ABOUT_LOGO_FRICTION = 0.9
 const ABOUT_LOGO_ROTATION_FORCE = 0.0675
 const ABOUT_LOGO_ROTATION_DAMPING = 0.9
-const ABOUT_LOGO_ROTATION_RETURN = 0.015
+const ABOUT_LOGO_ROTATION_RETURN = 0.0375
+const ABOUT_LOGO_TRANSLATION_RATIO = 0.65
 
 function getInitialPage() {
   return window.location.hash === '#about' ? 'about' : 'craft'
@@ -53,12 +54,14 @@ export default function App() {
   const mobileFocusScrollLockRef = useRef(0)
   const aboutLogoRef = useRef(null)
   const aboutLogoTargetRef = useRef({ x: 0, y: 0 })
+  const aboutLogoOriginRef = useRef({ x: 0, y: 0 })
   const aboutLogoPositionRef = useRef({ x: 0, y: 0 })
   const aboutLogoRotationRef = useRef(0)
   const aboutLogoRotationVelocityRef = useRef(0)
   const aboutLogoLastCursorXRef = useRef(0)
   const aboutLogoBoundsRef = useRef(null)
   const aboutLogoRafRef = useRef(0)
+  const aboutLogoVisibleRafRef = useRef(0)
   const [isMobile, setIsMobile] = useState(
     () => document.documentElement.clientWidth <= MOBILE_BREAKPOINT,
   )
@@ -76,6 +79,7 @@ export default function App() {
   }, [])
 
   const hideAboutLogo = useCallback(() => {
+    cancelAnimationFrame(aboutLogoVisibleRafRef.current)
     aboutLogoRotationVelocityRef.current = 0
     document.body.classList.remove('is-about-logo-hover')
     setAboutLogo((logo) => (logo ? { ...logo, visible: false } : logo))
@@ -86,13 +90,24 @@ export default function App() {
     const x = event.clientX
     const y = event.clientY
     aboutLogoTargetRef.current = { x, y }
+    aboutLogoOriginRef.current = { x, y }
     aboutLogoPositionRef.current = { x, y }
     aboutLogoRotationRef.current = 0
     aboutLogoRotationVelocityRef.current = 0
     aboutLogoLastCursorXRef.current = x
     aboutLogoBoundsRef.current = event.currentTarget.getBoundingClientRect()
     document.body.classList.add('is-about-logo-hover')
-    setAboutLogo({ ...logo, x, y, visible: true })
+    cancelAnimationFrame(aboutLogoVisibleRafRef.current)
+    setAboutLogo({ ...logo, x, y, visible: false })
+    aboutLogoVisibleRafRef.current = requestAnimationFrame(() => {
+      aboutLogoVisibleRafRef.current = requestAnimationFrame(() => {
+        setAboutLogo((current) =>
+          current && current.src === logo.src
+            ? { ...current, visible: true }
+            : current,
+        )
+      })
+    })
   }, [isMobile])
 
   const handleAboutLogoMove = useCallback((event) => {
@@ -101,7 +116,11 @@ export default function App() {
     const y = event.clientY
     const deltaX = x - aboutLogoLastCursorXRef.current
     aboutLogoLastCursorXRef.current = x
-    aboutLogoTargetRef.current = { x, y }
+    const origin = aboutLogoOriginRef.current
+    aboutLogoTargetRef.current = {
+      x: origin.x + (x - origin.x) * ABOUT_LOGO_TRANSLATION_RATIO,
+      y: origin.y + (y - origin.y) * ABOUT_LOGO_TRANSLATION_RATIO,
+    }
     aboutLogoRotationVelocityRef.current += deltaX * ABOUT_LOGO_ROTATION_FORCE
 
     const rect = aboutLogoBoundsRef.current
@@ -368,6 +387,8 @@ export default function App() {
             <a
               className="about-page__link"
               href="https://design.google/"
+              target="_blank"
+              rel="noopener noreferrer"
               onMouseEnter={(event) => showAboutLogo(event, { src: '/Google.png', alt: 'Google' })}
               onMouseMove={handleAboutLogoMove}
             >
@@ -376,6 +397,8 @@ export default function App() {
             <a
               className="about-page__link"
               href="https://shopify.design"
+              target="_blank"
+              rel="noopener noreferrer"
               onMouseEnter={(event) => showAboutLogo(event, { src: '/Shopify.png', alt: 'Shopify' })}
               onMouseMove={handleAboutLogoMove}
             >
@@ -385,6 +408,8 @@ export default function App() {
             <a
               className="about-page__link"
               href="https://shopify.design"
+              target="_blank"
+              rel="noopener noreferrer"
               onMouseEnter={(event) => showAboutLogo(event, { src: '/Shopify.png', alt: 'Shopify' })}
               onMouseMove={handleAboutLogoMove}
             >
