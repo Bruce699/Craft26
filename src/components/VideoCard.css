@@ -3,6 +3,7 @@
   border-radius: var(--dp-card-radius, 12px);
   overflow: hidden;
   background: #000;
+  cursor: pointer;
   /* Prevent flex/block from adding extra space below the video */
   line-height: 0;
   /* Hidden until the poster has loaded; then fade + slide up. */

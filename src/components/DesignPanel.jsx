@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import './DesignPanel.css'
 
 const DEFAULTS = {
-  bgColor: '#000000',
+  bgColor: '#0F0F0F',
   cardRadius: 12,
   cardStrokeColor: '#1c1c1c',
   cardStrokeOpacity: 100,

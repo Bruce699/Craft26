@@ -26,6 +26,7 @@ html {
   /* Keep the page scrollable but hide the scrollbar itself. With no
      scrollbar rendered, layout width never shifts, so no gutter is
      needed to keep columns stable */
+  background-color: #0F0F0F;
   overflow-y: scroll;
   scrollbar-width: none;
 }
@@ -35,8 +36,12 @@ html::-webkit-scrollbar {
 }
 
 body {
-  background-color: #000000;
+  background-color: #0F0F0F;
   color-scheme: dark;
   min-height: 100vh;
 }
 
+#root {
+  min-height: 100vh;
+  background-color: #0F0F0F;
+}
