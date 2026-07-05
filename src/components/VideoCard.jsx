@@ -4,6 +4,7 @@ import './VideoCard.css'
 
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
+const ENTRY_TRIGGER_DISTANCE = 40
 
 const MOBILE_FOCUS_SIDE_INSET = 4
 const MOBILE_FOCUS_RADIUS = 12
@@ -142,7 +143,8 @@ export default function VideoCard({
     const el = rootRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    initiallyInViewportRef.current = rect.top < window.innerHeight && rect.bottom > 0
+    initiallyInViewportRef.current =
+      rect.top < window.innerHeight + ENTRY_TRIGGER_DISTANCE && rect.bottom > 0
   }, [])
 
   useEffect(() => {
@@ -166,12 +168,15 @@ export default function VideoCard({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting || entry.boundingClientRect.top <= window.innerHeight) {
+        if (
+          entry.isIntersecting ||
+          entry.boundingClientRect.top <= window.innerHeight + ENTRY_TRIGGER_DISTANCE
+        ) {
           observer.disconnect()
           startEntry()
         }
       },
-      { root: null, rootMargin: '0px', threshold: 0 },
+      { root: null, rootMargin: `0px 0px ${ENTRY_TRIGGER_DISTANCE}px`, threshold: 0 },
     )
 
     observer.observe(el)
