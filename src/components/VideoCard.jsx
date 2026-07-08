@@ -213,18 +213,18 @@ export default function VideoCard({
       }
     }
 
-    setVideoReady(video.readyState >= 2)
+    setVideoReady(!video.paused && video.readyState >= 2)
     syncAspectRatio()
 
-    video.addEventListener('loadeddata', markReady)
-    video.addEventListener('canplay', markReady)
+    video.addEventListener('playing', markReady)
+    video.addEventListener('timeupdate', markReady)
     video.addEventListener('loadedmetadata', syncAspectRatio)
     video.addEventListener('resize', syncAspectRatio)
     video.addEventListener('emptied', resetReady)
 
     return () => {
-      video.removeEventListener('loadeddata', markReady)
-      video.removeEventListener('canplay', markReady)
+      video.removeEventListener('playing', markReady)
+      video.removeEventListener('timeupdate', markReady)
       video.removeEventListener('loadedmetadata', syncAspectRatio)
       video.removeEventListener('resize', syncAspectRatio)
       video.removeEventListener('emptied', resetReady)

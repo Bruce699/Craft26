@@ -15,7 +15,6 @@ export const feedColumns = [
     { id: 'c1r7', playbackId: 'jR01HgIlum91aQlmQLeTu9b02V9YsIKRfHJMBrVWoMSoM', name: 'Info Card Generation', date: 'October 2025' },
     { id: 'c1r8', playbackId: 'kUW1DHzuaQMcegeJI9sHXlGXxU00DxZH00YjaYsUFMOqg', name: 'Conceptual UI', date: 'January 2026' },
     { id: 'c1r9', playbackId: 'g59o3r8T005Q01GNj3Y00wXISpDM00FwVVPxi00Gx3EI1Qo4', name: 'AI Brush', date: 'October 2025' },
-    { id: 'c1r10', playbackId: 'Mc47Cwar3gkxxixSkaWVvREWtzMpa89u6N02KNOal02wc', name: 'Generative Maze in VR', date: 'February 2025' },
   ],
   // Column 2
   [
@@ -29,6 +28,7 @@ export const feedColumns = [
     { id: 'c2r8', playbackId: 'FA1OaJpIvpOcx1Q8y9apfRi8wDU011c302fk8XU6aParA', name: 'iOS Exit', date: 'August 2025' },
     { id: 'c2r9', playbackId: '01nPlGYjmGSakKAoHKgv5uxzD018RRfJGhCXjk9jMwmSo', name: 'Gaze Tracking in VR', date: 'March 2025' },
     { id: 'c2r10', playbackId: 'DizwOF9yw00s1YnBxHfnvebryIH00amrlX7YTlCsOrbJM', name: 'Media Preset', date: 'September 2025' },
+    { id: 'c1r10', playbackId: 'Mc47Cwar3gkxxixSkaWVvREWtzMpa89u6N02KNOal02wc', name: 'Generative Maze in VR', date: 'February 2025' },
   ],
   // Column 3
   [
