@@ -7,6 +7,7 @@ export const feedColumns = [
   [
     { id: 'c1r1', playbackId: 'Blbhj8GsinBk01vt9Afs4Q1g9xbSwrsLkQoFTIUohBDE', name: 'Cursor-Follow Lamp', date: 'November 2025' },
     { id: 'c1r2', playbackId: 'CUu6M78DlOsa6QartKzyLiovgQVBhPWT2utVWB4S602I', name: 'Strings Todo', date: 'April 2026' },
+    { id: 'iceman', playbackId: 'TZIV6Je5WM01izWJITCDMMfHgb8H3gxOwC00DhwsH2lj4', name: 'Iceman', date: 'July 2026' },
     { id: 'c1r3', playbackId: '01BF5k6garBSE8SG9PqQMRUw5Qe01mlefVYY9biwa49DQ', name: 'Base44 Transition', date: 'June 2026' },
     { id: 'c1r4', playbackId: 'vGHsk01Ymm8901Z8c9IFbVrlU00R637eK6NX00nDNWZEpeQ', name: 'Growing Pattern', date: 'April 2026' },
     { id: 'c1r5', playbackId: 'ZBAXXn5AAt3DGWG9lp9vzl00JYOyEhTYwO43uYi4SOe00', name: 'Hike Your Todos - Widget', date: 'May 2026' },
@@ -51,6 +52,6 @@ const mobileOrder = [
   // MC1 top → bottom
   ['c3r3', 'c2r2', 'c1r2', 'c1r1', 'c3r4', 'c3r7', 'c1r4', 'c2r6', 'c3r5', 'c1r7', 'c1r8', 'c3r8', 'c2r8', 'c2r10', 'c3r10'],
   // MC2 top → bottom
-  ['c1r3', 'c1r5', 'c2r1', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5', 'c3r9', 'c1r10', 'c2r9'],
+  ['iceman', 'c2r1', 'c1r5', 'c1r3', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5', 'c3r9', 'c1r10', 'c2r9'],
 ]
 export const mobileFeedColumns = mobileOrder.map((ids) => ids.map((id) => itemById.get(id)))

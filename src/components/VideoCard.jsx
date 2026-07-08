@@ -13,6 +13,11 @@ const MOBILE_DRAG_FRICTION = 280
 const MOBILE_DRAG_SCALE_DISTANCE = 260
 const MOBILE_DRAG_EXIT_DISTANCE = 56
 
+const PNG_THUMBNAIL_NAME_OVERRIDES = {
+  'Hike Your Todos - Widget': 'Hike Your Todos',
+  'Superpower Referral Cards': 'Superpower Referral Card',
+}
+
 export default function VideoCard({
   id,
   entranceIndex = 0,
@@ -613,6 +618,7 @@ export default function VideoCard({
       ? { aspectRatio: String(videoAspectRatio) }
       : {}),
   }
+  const posterName = PNG_THUMBNAIL_NAME_OVERRIDES[name] ?? name
 
   return (
     <div
@@ -634,7 +640,7 @@ export default function VideoCard({
       >
         <img
           className="video-card__poster"
-          src={`/thumbnails/${encodeURIComponent(name)}.jpg`}
+          src={`/thumbnails/png/${encodeURIComponent(posterName)}.png`}
           alt=""
           onLoad={handlePosterLoad}
           onError={handlePosterLoad}
