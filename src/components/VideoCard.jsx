@@ -21,6 +21,7 @@ const PNG_THUMBNAIL_NAME_OVERRIDES = {
 export default function VideoCard({
   id,
   entranceIndex = 0,
+  animateEntry = true,
   playbackId,
   name,
   date,
@@ -56,7 +57,7 @@ export default function VideoCard({
   const dragMovedRef = useRef(false)
   const [isVisible, setIsVisible] = useState(false)
   const [posterLoaded, setPosterLoaded] = useState(false)
-  const [entryState, setEntryState] = useState('pending')
+  const [entryState, setEntryState] = useState(animateEntry ? 'pending' : 'visible')
   const [entryOffset, setEntryOffset] = useState('100vh')
   const [mobileDrag, setMobileDrag] = useState({
     x: 0,
