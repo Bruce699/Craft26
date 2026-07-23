@@ -81,6 +81,7 @@ export default function FeedGrid({
                 key={item.id}
                 id={item.id}
                 entranceIndex={rowIndex * numCols + colIndex}
+                animateEntry={rowIndex < 3}
                 playbackId={item.playbackId}
                 name={item.name}
                 date={item.date}
