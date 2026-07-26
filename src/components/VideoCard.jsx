@@ -12,6 +12,8 @@ const MOBILE_FOCUS_TRANSITION_MS = 340
 const MOBILE_DRAG_FRICTION = 280
 const MOBILE_DRAG_SCALE_DISTANCE = 260
 const MOBILE_DRAG_EXIT_DISTANCE = 56
+const FOCUS_BACKGROUND_SCALE = 0.92
+const FOCUS_EASING = 'cubic-bezier(0.5, 0, 0, 1)'
 
 const PNG_THUMBNAIL_NAME_OVERRIDES = {
   'Hike Your Todos - Widget': 'Hike Your Todos',
@@ -603,14 +605,42 @@ export default function VideoCard({
 
   const shellStyle = useMemo(() => {
     if (phase !== 'feed') return undefined
-    if (!(isMobileFocused || isMobileFocusPrevious || isDesktopFocused)) return undefined
-    const focusRect =
-      (isDesktopFocused ? desktopFocusRect : mobileFocusRect) ?? originalRectRef.current
-    if (!focusRect) return undefined
-    return {
-      height: `${focusRect.height}px`,
+    const isFocusedShell =
+      isMobileFocused || isMobileFocusPrevious || isDesktopFocused
+    const focusRect = originalRectRef.current
+
+    if (isFocusedShell) {
+      const selectedRect =
+        (isDesktopFocused ? desktopFocusRect : mobileFocusRect) ?? focusRect
+      return selectedRect ? { height: `${selectedRect.height}px` } : undefined
     }
-  }, [phase, isMobileFocused, isMobileFocusPrevious, mobileFocusRect, isDesktopFocused, desktopFocusRect])
+
+    if (!desktopFocusActive) return undefined
+    if (!focusRect) return undefined
+
+    const duration = desktopFocusExiting ? 300 : 400
+    const scale = desktopFocusExiting ? 1 : FOCUS_BACKGROUND_SCALE
+    const distanceToViewportCenterX = window.innerWidth / 2 - focusRect.left
+    const distanceToViewportCenterY = window.innerHeight / 2 - focusRect.top
+    const shiftX = distanceToViewportCenterX * (1 - scale)
+    const shiftY = distanceToViewportCenterY * (1 - scale)
+
+    return {
+      transform: `translate(${shiftX}px, ${shiftY}px) scale(${scale})`,
+      transformOrigin: 'top left',
+      transition: `transform ${duration}ms ${FOCUS_EASING}`,
+      willChange: 'transform',
+    }
+  }, [
+    phase,
+    isMobileFocused,
+    isMobileFocusPrevious,
+    mobileFocusRect,
+    isDesktopFocused,
+    desktopFocusRect,
+    desktopFocusActive,
+    desktopFocusExiting,
+  ])
 
   const cardStyle = {
     '--entry-offset': entryOffset,

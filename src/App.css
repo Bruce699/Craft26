@@ -209,7 +209,9 @@ body.is-dark {
 }
 
 body.is-desktop-focus,
-html:has(body.is-desktop-focus) {
+body.is-desktop-focus-exiting,
+html:has(body.is-desktop-focus),
+html:has(body.is-desktop-focus-exiting) {
   overflow: hidden;
 }
 

@@ -252,7 +252,14 @@ export default function App() {
   // Lock page scroll while a card is desktop-focused so the fixed-position
   // card still lines up with its grid slot when it returns.
   useEffect(() => {
-    document.body.classList.toggle('is-desktop-focus', !!desktopFocus)
+    document.body.classList.toggle(
+      'is-desktop-focus',
+      !!desktopFocus && !desktopFocus.exiting,
+    )
+    document.body.classList.toggle(
+      'is-desktop-focus-exiting',
+      !!desktopFocus?.exiting,
+    )
   }, [desktopFocus])
 
   useEffect(() => {
