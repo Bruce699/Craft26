@@ -19,7 +19,7 @@
   transition:
     opacity 0.3s cubic-bezier(0.5, 0, 0, 1),
     filter 0.3s cubic-bezier(0.5, 0, 0, 1),
-    transform 0.4s cubic-bezier(0.5, 0, 0, 1);
+    transform 0.5s cubic-bezier(0.5, 0, 0, 1);
 }
 
 .nav-pill--fixed {
@@ -51,7 +51,7 @@ body.is-desktop-focus .nav-pill {
 
 body.is-desktop-focus-exiting .nav-pill {
   transform: translateX(-50%) scale(1);
-  transition-duration: 0.3s;
+  transition-duration: 0.45s;
 }
 
 .nav-pill__link {

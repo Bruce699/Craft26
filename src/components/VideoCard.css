@@ -70,11 +70,15 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
   opacity: 0;
 }
 
-/* Fade the stroke out on the desktop-focused card — matches the 0.4s
-   zoom-in and 0.3s zoom-out durations. */
+/* Fade the stroke with the desktop focus transition. */
 .video-card--desktop-focused::after {
   opacity: 0;
-  transition: opacity 0.4s cubic-bezier(0.5, 0, 0, 1);
+  transition: opacity 0.5s cubic-bezier(0.5, 0, 0, 1);
+}
+
+.video-card--desktop-focus-exiting::after {
+  opacity: 1;
+  transition-duration: 0.45s;
 }
 
 /* Poster drives the card's intrinsic size; video overlays on top. */

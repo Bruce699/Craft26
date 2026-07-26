@@ -424,7 +424,7 @@ export default function VideoCard({
             transform: 'translate(0px, 0px) scale(1)',
             borderRadius: '12px',
             transition:
-              'transform 0.3s cubic-bezier(0.5, 0, 0, 1), border-radius 0.3s cubic-bezier(0.5, 0, 0, 1)',
+              'transform 0.45s cubic-bezier(0.5, 0, 0, 1), border-radius 0.45s cubic-bezier(0.5, 0, 0, 1)',
             zIndex: 100,
           }
         }
@@ -434,7 +434,7 @@ export default function VideoCard({
           // Divide by scale so the visual corner stays ~12px when scaled.
           borderRadius: `${12 / scale}px`,
           transition:
-            'transform 0.4s cubic-bezier(0.5, 0, 0, 1), border-radius 0.4s cubic-bezier(0.5, 0, 0, 1)',
+            'transform 0.5s cubic-bezier(0.5, 0, 0, 1), border-radius 0.5s cubic-bezier(0.5, 0, 0, 1)',
           zIndex: 100,
         }
       }
@@ -618,7 +618,7 @@ export default function VideoCard({
     if (!desktopFocusActive) return undefined
     if (!focusRect) return undefined
 
-    const duration = desktopFocusExiting ? 300 : 400
+    const duration = desktopFocusExiting ? 450 : 500
     const scale = desktopFocusExiting ? 1 : FOCUS_BACKGROUND_SCALE
     const distanceToViewportCenterX = window.innerWidth / 2 - focusRect.left
     const distanceToViewportCenterY = window.innerHeight / 2 - focusRect.top
@@ -660,7 +660,7 @@ export default function VideoCard({
     >
       <div
         ref={cardRef}
-        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''}`}
+        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''} ${isDesktopFocused && desktopFocusExiting ? 'video-card--desktop-focus-exiting' : ''}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onPointerDown={handlePointerDown}
