@@ -7,11 +7,13 @@ const DEFAULT_H_PADDING = 48
 const DEFAULT_COL_GAP = 12
 const NUM_COLS = 3
 const DEFAULT_TOP_OFFSET = 150
+const DESKTOP_ENTRY_ROWS = 3
 
 const MOBILE_BREAKPOINT = 480
 const MOBILE_GAP = 4
 const MOBILE_NUM_COLS = 2
 const MOBILE_TOP_OFFSET = 116
+const MOBILE_ENTRY_ROWS = 5
 
 function useWindowWidth(enabled) {
   const [width, setWidth] = useState(() => document.documentElement.clientWidth)
@@ -81,7 +83,9 @@ export default function FeedGrid({
                 key={item.id}
                 id={item.id}
                 entranceIndex={rowIndex * numCols + colIndex}
-                animateEntry={rowIndex < 3}
+                animateEntry={
+                  rowIndex < (isMobile ? MOBILE_ENTRY_ROWS : DESKTOP_ENTRY_ROWS)
+                }
                 playbackId={item.playbackId}
                 name={item.name}
                 date={item.date}

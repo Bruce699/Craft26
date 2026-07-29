@@ -5,6 +5,7 @@ import './VideoCard.css'
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
 const ENTRY_TRIGGER_DISTANCE = 40
+const ENTRY_STAGGER_MS = 60
 
 const MOBILE_FOCUS_SIDE_INSET = 4
 const MOBILE_FOCUS_RADIUS = 12
@@ -166,7 +167,7 @@ export default function VideoCard({
       const offset = initiallyInViewportRef.current
         ? 150
         : Math.max(window.innerHeight + rect.height - rect.top, rect.height)
-      const delay = initiallyInViewportRef.current ? entranceIndex * 60 : 0
+      const delay = entranceIndex * ENTRY_STAGGER_MS
 
       setEntryOffset(`${offset}px`)
       entranceTimerRef.current = window.setTimeout(() => {
