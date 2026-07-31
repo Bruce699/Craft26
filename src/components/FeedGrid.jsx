@@ -43,21 +43,13 @@ export default function FeedGrid({
 }) {
   const windowWidth = useWindowWidth(phase === 'feed')
 
-  const [gridOverrides, setGridOverrides] = useState({})
-
-  useEffect(() => {
-    const handler = (e) => setGridOverrides(e.detail)
-    window.addEventListener('dp-grid-update', handler)
-    return () => window.removeEventListener('dp-grid-update', handler)
-  }, [])
-
   const isMobile = windowWidth <= MOBILE_BREAKPOINT
   const columns = isMobile ? mobileFeedColumns : feedColumns
   const numCols = isMobile ? MOBILE_NUM_COLS : NUM_COLS
 
-  const gap = isMobile ? MOBILE_GAP : (gridOverrides.gap ?? DEFAULT_COL_GAP)
-  const hPadding = isMobile ? MOBILE_GAP : (gridOverrides.padding ?? DEFAULT_H_PADDING)
-  const topOffset = isMobile ? MOBILE_TOP_OFFSET : (gridOverrides.topOffset ?? DEFAULT_TOP_OFFSET)
+  const gap = isMobile ? MOBILE_GAP : DEFAULT_COL_GAP
+  const hPadding = isMobile ? MOBILE_GAP : DEFAULT_H_PADDING
+  const topOffset = isMobile ? MOBILE_TOP_OFFSET : DEFAULT_TOP_OFFSET
 
   const columnWidth = (windowWidth - 2 * hPadding - (numCols - 1) * gap) / numCols
 

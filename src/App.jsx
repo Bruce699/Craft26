@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import FeedGrid from './components/FeedGrid'
 import Nav from './components/Nav'
-import DesignPanel from './components/DesignPanel'
 import CoordinateScene from './coordinate/CoordinateScene'
 import { useCoordinatePoints } from './coordinate/useCoordinateData'
 import './App.css'
@@ -542,7 +541,6 @@ export default function App() {
           </div>
         )
       })()}
-      {!isAboutPage && <DesignPanel />}
       {!isAboutPage && showScene && (
         <CoordinateScene
           points={points}

@@ -208,16 +208,6 @@ export default function VideoCard({
     }
   }, [phase, posterLoaded, entranceIndex, scheduleEntry])
 
-  useEffect(() => {
-    if (!animateEntry) return
-    const replayEntry = () => {
-      if (phase !== 'feed' || !posterLoaded) return
-      scheduleEntry(INITIAL_ENTRY_OFFSET, entranceIndex * ENTRY_STAGGER_MS)
-    }
-    window.addEventListener('dp-replay-entry', replayEntry)
-    return () => window.removeEventListener('dp-replay-entry', replayEntry)
-  }, [animateEntry, phase, posterLoaded, entranceIndex, scheduleEntry])
-
   // Snapshot the card's viewport rect while it's still in normal feed layout.
   // Once transforms kick in, getBoundingClientRect would return the *moved*
   // position, so we stop updating the snapshot once we leave the feed phase.
