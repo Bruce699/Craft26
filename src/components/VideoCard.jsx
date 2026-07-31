@@ -5,7 +5,8 @@ import './VideoCard.css'
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
 const ENTRY_TRIGGER_DISTANCE = 40
-const ENTRY_STAGGER_MS = 60
+const ENTRY_STAGGER_MS = 75
+const INITIAL_ENTRY_OFFSET = 'var(--dp-entry-distance, 400px)'
 
 const MOBILE_FOCUS_SIDE_INSET = 4
 const MOBILE_FOCUS_RADIUS = 12
@@ -148,6 +149,18 @@ export default function VideoCard({
     })
   }
 
+  const scheduleEntry = useCallback((offset, delay) => {
+    window.clearTimeout(entranceTimerRef.current)
+    setEntryOffset(typeof offset === 'number' ? `${offset}px` : offset)
+    setEntryState('pending')
+    requestAnimationFrame(() => {
+      setEntryState('ready')
+      entranceTimerRef.current = window.setTimeout(() => {
+        requestAnimationFrame(() => setEntryState('visible'))
+      }, delay)
+    })
+  }, [])
+
   useEffect(() => {
     const el = rootRef.current
     if (!el) return
@@ -165,14 +178,14 @@ export default function VideoCard({
       if (entryState !== 'pending') return
       const rect = el.getBoundingClientRect()
       const offset = initiallyInViewportRef.current
-        ? 150
+        ? INITIAL_ENTRY_OFFSET
         : Math.max(window.innerHeight + rect.height - rect.top, rect.height)
       const delay = entranceIndex * ENTRY_STAGGER_MS
 
-      setEntryOffset(`${offset}px`)
-      entranceTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => setEntryState('visible'))
-      }, delay)
+      // Commit the intended start transform with transitions disabled first.
+      // Enabling transitions and revealing in later frames prevents the
+      // default 100vh offset from animating toward this value while hidden.
+      scheduleEntry(offset, delay)
     }
 
     const observer = new IntersectionObserver(
@@ -193,7 +206,17 @@ export default function VideoCard({
       observer.disconnect()
       window.clearTimeout(entranceTimerRef.current)
     }
-  }, [phase, posterLoaded, entryState, entranceIndex])
+  }, [phase, posterLoaded, entranceIndex, scheduleEntry])
+
+  useEffect(() => {
+    if (!animateEntry) return
+    const replayEntry = () => {
+      if (phase !== 'feed' || !posterLoaded) return
+      scheduleEntry(INITIAL_ENTRY_OFFSET, entranceIndex * ENTRY_STAGGER_MS)
+    }
+    window.addEventListener('dp-replay-entry', replayEntry)
+    return () => window.removeEventListener('dp-replay-entry', replayEntry)
+  }, [animateEntry, phase, posterLoaded, entranceIndex, scheduleEntry])
 
   // Snapshot the card's viewport rect while it's still in normal feed layout.
   // Once transforms kick in, getBoundingClientRect would return the *moved*
@@ -661,7 +684,7 @@ export default function VideoCard({
     >
       <div
         ref={cardRef}
-        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''} ${isDesktopFocused && desktopFocusExiting ? 'video-card--desktop-focus-exiting' : ''}`}
+        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'pending' ? 'video-card--entry-pending' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''} ${isDesktopFocused && desktopFocusExiting ? 'video-card--desktop-focus-exiting' : ''}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onPointerDown={handlePointerDown}

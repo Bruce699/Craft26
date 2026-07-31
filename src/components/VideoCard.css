@@ -8,11 +8,11 @@
   line-height: 0;
   /* Hidden until the poster has loaded and the card reaches the viewport. */
   opacity: 0;
-  transform: translateY(var(--entry-offset, 100vh)) scale(0.6);
+  transform: translateY(var(--entry-offset, 100vh)) scale(var(--dp-entry-scale, 0.4));
   transform-origin: center center;
   transition:
-    opacity 0.6s linear,
-    transform 0.6s cubic-bezier(0.5, 0, 0, 1),
+    opacity var(--dp-entry-duration-desktop, 500ms) linear,
+    transform var(--dp-entry-duration-desktop, 500ms) var(--dp-entry-easing, cubic-bezier(0, 0.91, 0, 1)),
     filter 0.4s cubic-bezier(0.5, 0, 0, 1);
 }
 
@@ -45,10 +45,15 @@ body.is-mobile-focus-exiting .video-card {
 @media (max-width: 480px) {
   .video-card {
     transition:
-      opacity 0.51s linear,
-      transform 0.51s cubic-bezier(0.5, 0, 0, 1),
+      opacity var(--dp-entry-duration-mobile, 550ms) linear,
+      transform var(--dp-entry-duration-mobile, 550ms) var(--dp-entry-easing, cubic-bezier(0, 0.91, 0, 1)),
       filter 0.34s cubic-bezier(0.5, 0, 0, 1);
   }
+}
+
+/* Prepare the exact entry offset without animating from the 100vh fallback. */
+.video-card--entry-pending {
+  transition: none;
 }
 
 /* Inner outline as a pseudo-element so it never affects layout size.

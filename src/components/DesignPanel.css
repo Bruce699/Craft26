@@ -1,5 +1,5 @@
 .design-panel-orb {
-  display: none;
+  display: flex;
   position: fixed;
   bottom: 24px;
   left: 24px;
@@ -10,6 +10,8 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   z-index: 9999;
   align-items: center;
@@ -33,7 +35,7 @@
   position: fixed;
   bottom: 24px;
   left: 24px;
-  width: 280px;
+  width: 304px;
   max-height: calc(100vh - 48px);
   background: rgba(22, 22, 22, 0.85);
   backdrop-filter: blur(40px);
@@ -233,6 +235,179 @@
   min-width: 28px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.design-panel__slider-number {
+  width: 42px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.65);
+  font-family: inherit;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  outline: none;
+  appearance: textfield;
+}
+
+.design-panel__slider-number::-webkit-inner-spin-button,
+.design-panel__slider-number::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.design-panel__slider-number:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.design-panel__bezier-preview {
+  margin-bottom: 12px;
+}
+
+.design-panel__curve-graph {
+  display: block;
+  width: 100%;
+  height: 132px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.035);
+  background-size: 20px 20px;
+}
+
+.design-panel__curve-guide {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.design-panel__curve-handle {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+
+.design-panel__curve-path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.design-panel__curve-endpoint {
+  fill: rgba(255, 255, 255, 0.8);
+}
+
+.design-panel__curve-control {
+  stroke: rgba(15, 15, 15, 0.9);
+  stroke-width: 1.5;
+}
+
+.design-panel__curve-control--one {
+  fill: #79a7ff;
+}
+
+.design-panel__curve-control--two {
+  fill: #ffd36a;
+}
+
+.design-panel__motion-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.design-panel__motion-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.design-panel__motion-dot {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  z-index: 1;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+  animation-name: design-panel-curve-preview;
+  animation-duration: 1s;
+  animation-fill-mode: both;
+}
+
+@keyframes design-panel-curve-preview {
+  from {
+    left: 6px;
+  }
+  to {
+    left: calc(100% - 18px);
+  }
+}
+
+.design-panel__curve-code {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.design-panel__curve-code code {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.design-panel__curve-code button,
+.design-panel__replay {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  font: inherit;
+  cursor: pointer;
+}
+
+.design-panel__curve-code button {
+  padding: 6px 8px;
+}
+
+.design-panel__replay {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+}
+
+.design-panel__curve-code button:hover,
+.design-panel__replay:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .design-panel__copy {
