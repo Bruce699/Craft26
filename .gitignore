@@ -1,0 +1,8 @@
+# Build output — Vercel regenerates this from `npm run build`.
+# Must stay untracked: public/2025 is ~650 MB and would be duplicated into dist/.
+dist/
+
+.DS_Store
+
+# Empty clone of github.com/Bruce699/Portfolio-2025, kept only as a local remote.
+tools/portfolio-2025-empty-clone/

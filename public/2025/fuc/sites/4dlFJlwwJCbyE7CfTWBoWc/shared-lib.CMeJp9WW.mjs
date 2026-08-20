@@ -1,0 +1,2 @@
+import{t as e}from"./rolldown-runtime.myuD9Iuq.mjs";function t(e,t){return{description:`Crafting experiences with rhythm.`,favicon:`/2025/fuc/assets/d78gRiT3DQMn0RmfyES3W16u9c.png`,robots:`max-image-preview:large`,socialImage:`/2025/fuc/assets/jBmYugrddHdMwd9QRmb4kVn4GM.png`,title:`Bruce Cao | Design Portfolio`}}var n=e((()=>{}));export{t as n,n as t};
+//# sourceMappingURL=shared-lib.CMeJp9WW.mjs.map
