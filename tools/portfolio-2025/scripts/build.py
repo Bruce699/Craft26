@@ -135,6 +135,11 @@ def build_page(src: pathlib.Path, dest: pathlib.Path) -> None:
         lambda m: 'href="%s%s"' % (route_path("/" + m.group(1)) if m.group(1) else route_path("/"), m.group(2)),
         html,
     )
+    # home was canonical at "…bruce-cao.com/", which mounts to "…/2025/" — but
+    # the host serves the base without a trailing slash, so drop it.
+    if BASE:
+        html = html.replace('"%s%s/"' % (CANONICAL_ORIGIN, BASE),
+                            '"%s%s"' % (CANONICAL_ORIGIN, BASE))
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(html, encoding="utf-8")
     print(f"built {dest.relative_to(REPO)}")
