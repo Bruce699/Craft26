@@ -94,7 +94,7 @@ export default function AboutV2() {
     'About',
     {
       layout: {
-        margin: [36, 0, 96],
+        margin: [48, 0, 96],
         navGap: [36, 0, 96],
         photoRadius: [12, 0, 48],
         mobileMargin: [20, 0, 96],
@@ -258,9 +258,8 @@ export default function AboutV2() {
           <div>
             {about.showHeading && <h1 className="about-v2__heading">About</h1>}
             <p className="about-v2__copy">
-              Hey - I’m Bruce Cao, a product designer, motion &amp; interaction
-              designer, and sound designer who thinks in rhythm and builds in
-              motion.
+              Hey - I’m Bruce Cao, a product &amp; interaction designer and
+              sound engineer who thinks in rhythm and builds in motion.
             </p>
             <p className="about-v2__copy">
               I’m currently a fourth-year undergrad @Duke, studying Computer
