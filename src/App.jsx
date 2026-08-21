@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import FeedGrid from './components/FeedGrid'
 import Nav from './components/Nav'
 import CoordinateScene from './coordinate/CoordinateScene'
+import AboutV2 from './about/AboutV2'
 import { useCoordinatePoints } from './coordinate/useCoordinateData'
 import './App.css'
 
@@ -43,7 +44,11 @@ const SHOPIFY_LOGOS = [
 ]
 
 function getInitialPage() {
-  return window.location.hash === '#about' ? 'about' : 'craft'
+  const hash = window.location.hash
+  if (hash === '#about') return 'about'
+  // Sandbox duplicate of the about page — iterate here, #about stays live.
+  if (hash === '#about-v2') return 'about-v2'
+  return 'craft'
 }
 
 export default function App() {
@@ -285,7 +290,7 @@ export default function App() {
     return () => clearTimeout(t)
   }, [mobileFocus])
 
-  const isAboutPage = page === 'about'
+  const isAboutPage = page === 'about' || page === 'about-v2'
   const mobileFocusVisible = phase === 'feed' && !isAboutPage && !!mobileFocus
   const showMobileFocusOverlay = mobileFocusVisible && isMobile
 
@@ -398,8 +403,10 @@ export default function App() {
 
   return (
     <>
-      {phase === 'feed' && <Nav currentPage={page} />}
-      {isAboutPage ? (
+      {phase === 'feed' && <Nav currentPage={isAboutPage ? 'about' : page} />}
+      {page === 'about-v2' ? (
+        <AboutV2 />
+      ) : isAboutPage ? (
         <main className="about-page">
           <img className="about-page__photo" src="/Myself.png" alt="" />
           <p className="about-page__copy">
