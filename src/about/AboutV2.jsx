@@ -94,7 +94,7 @@ export default function AboutV2() {
     'About',
     {
       layout: {
-        margin: [36, 0, 96],
+        margin: [48, 0, 96],
         navGap: [36, 0, 96],
         photoRadius: [12, 0, 48],
         mobileMargin: [20, 0, 96],

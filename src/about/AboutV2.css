@@ -1,7 +1,8 @@
 /* About page (v2) — sandbox at #about-v2.
-   Layout anchors: the photo frame sits 36px from the right edge, the bottom
+   Layout anchors: the photo frame sits 48px from the right edge, the bottom
    edge, and the nav pill; its left edge is the page midline. The text column
-   top-aligns and bottom-aligns to that same frame.
+   top-aligns and bottom-aligns to that same frame. The 48px margin matches the
+   craft grid's horizontal edge padding (FeedGrid.jsx DEFAULT_H_PADDING).
 
    Every tunable reads --dp-about-* so the DialKit panel in AboutV2.jsx can
    drive it live. The fallbacks are the shipped design values. */
@@ -9,7 +10,7 @@
 .about-v2 {
   --about-nav-top: 40px;      /* .nav-pill top */
   --about-nav-height: 28px;   /* 16px line-height + 6px padding x2 */
-  --about-margin: var(--dp-about-margin, 36px);
+  --about-margin: var(--dp-about-margin, 48px);
   --about-frame-top: calc(
     var(--about-nav-top) + var(--about-nav-height) + var(--dp-about-nav-gap, 36px)
   );
