@@ -5,7 +5,7 @@
 export const feedColumns = [
   // Column 1
   [
-    { id: 'c1r1', playbackId: 'Blbhj8GsinBk01vt9Afs4Q1g9xbSwrsLkQoFTIUohBDE', name: 'Cursor-Follow Lamp', date: 'November 2025' },
+    { id: 'c2r2', playbackId: '2BPUc02BHPCilYGFASb6QuU4E9F02wiMefxaFBENtixcc', name: 'Self-disciplined Agent', date: 'February 2026' },
     { id: 'c1r2', playbackId: 'CUu6M78DlOsa6QartKzyLiovgQVBhPWT2utVWB4S602I', name: 'Strings Todo', date: 'April 2026' },
     { id: 'iceman', playbackId: 'TZIV6Je5WM01izWJITCDMMfHgb8H3gxOwC00DhwsH2lj4', name: 'Iceman', date: 'July 2026' },
     { id: 'c1r3', playbackId: '01BF5k6garBSE8SG9PqQMRUw5Qe01mlefVYY9biwa49DQ', name: 'Base44 Transition', date: 'June 2026' },
@@ -18,8 +18,9 @@ export const feedColumns = [
   ],
   // Column 2
   [
+    { id: 'sneaker-pants', playbackId: 'K22TndfTOAfZoH3alYKTE2ltM7PLp6aipOXly1mcS9g', name: 'Sneaker-Pants Preview', date: 'September 2026' },
     { id: 'c2r1', playbackId: 'g6EJ015Yax00Kl70202LZdK014r4bSdm1SWTvmZzQTeMIHyU', name: 'Hike Your Todos', date: 'April 2026' },
-    { id: 'c2r2', playbackId: '2BPUc02BHPCilYGFASb6QuU4E9F02wiMefxaFBENtixcc', name: 'Self-disciplined Agent', date: 'February 2026' },
+    { id: 'c1r1', playbackId: 'Blbhj8GsinBk01vt9Afs4Q1g9xbSwrsLkQoFTIUohBDE', name: 'Cursor-Follow Lamp', date: 'November 2025' },
     { id: 'c2r3', playbackId: 'YjDjAU7P3KanZw2kA5pAF02IaQuxYiHierePucxTJsHU', name: 'Contextual Search', date: 'September 2025' },
     { id: 'c2r4', playbackId: 'lkOFeA9rDgNGQdyzB77FWIftopmsbhKO00SOcLAnsP00c', name: 'Card Swipe Interaction', date: 'March 2026' },
     { id: 'c2r5', playbackId: 'jIrloIxCi1ToIGx4u9Yc7Zp1RjgzXba1mwnIJKDsNoc', name: 'Follow-up Thread', date: 'September 2025' },
@@ -52,6 +53,6 @@ const mobileOrder = [
   // MC1 top → bottom
   ['c3r3', 'c2r2', 'c1r2', 'c1r1', 'c3r4', 'c3r7', 'c1r4', 'c2r6', 'c3r5', 'c1r7', 'c1r8', 'c3r8', 'c2r8', 'c2r10', 'c3r10'],
   // MC2 top → bottom
-  ['iceman', 'c2r1', 'c1r5', 'c1r3', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5', 'c3r9', 'c1r10', 'c2r9'],
+  ['sneaker-pants', 'iceman', 'c2r1', 'c1r5', 'c1r3', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5', 'c3r9', 'c1r10', 'c2r9'],
 ]
 export const mobileFeedColumns = mobileOrder.map((ids) => ids.map((id) => itemById.get(id)))
