@@ -10,8 +10,8 @@ import { useEffect, useRef } from 'react'
 //         particle's colour from where it is to the new photo's colour, with
 //         a scatter impulse so the field visibly reorganises and re-forms.
 //
-// All tunables arrive via `params` (DialKit-driven); they're read through a
-// ref each frame so dial drags never rebuild the field.
+// Appearance and physics settings arrive via `params`; they are read through
+// a ref each frame without rebuilding the particle field.
 //
 // The canvas is deliberately larger than the photo frame by `bleed` on every
 // side, so stirred particles can travel outside the image without being
@@ -62,7 +62,6 @@ export default function ParticlePhoto({
   activeIndex,
   params,
   radius,
-  replayKey,
 }) {
   const canvasRef = useRef(null)
   const paramsRef = useRef(params)
@@ -585,7 +584,7 @@ export default function ParticlePhoto({
       }
     }
     // Gap/bleed/radius reshape the field; everything else flows through refs.
-  }, [sourceKey, replayKey, params.gap, params.bleed, radius])
+  }, [sourceKey, params.gap, params.bleed, radius])
 
   // Hovering an experience row drives this; the field recolours in place.
   useEffect(() => {

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useDialKit } from 'dialkit'
 import ParticlePhoto from './ParticlePhoto'
 import './AboutV2.css'
 
@@ -52,13 +51,6 @@ const BASE_PHOTO = '/Myself.png'
 const PHOTO_SOURCES = [BASE_PHOTO, ...EXPERIENCE.map((e) => e.photo)]
 const MOBILE_QUERY = '(max-width: 768px)'
 
-// Only these weights have a @font-face, so a slider would have dead stops.
-const weight = (defaultWeight) => ({
-  type: 'select',
-  options: ['200', '300', '350', '400'],
-  default: String(defaultWeight),
-})
-
 // A logo that hasn't been dropped into /public/Logos yet leaves its tile empty
 // rather than rendering a broken-image glyph.
 const hideMissingLogo = (event) => {
@@ -83,108 +75,92 @@ function useMediaQuery(query) {
   return matches
 }
 
+// Fixed design and particle settings for the About page.
+const ABOUT_SETTINGS = {
+  layout: {
+    margin: 48,
+    navGap: 36,
+    photoRadius: 12,
+    mobileMargin: 20,
+    mobileNavGap: 72,
+    mobilePhotoGap: 48,
+    background: '#0F0F0F',
+  },
+  columnWidth: {
+    // Width = the window-width ratio, held between min and max.
+    // Set min and max to the same number for a fixed-width column.
+    ratio: 0.24,
+    min: 440,
+    max: 720,
+  },
+  contact: {
+    fontSize: 13,
+    fontWeight: '300',
+    lineHeight: 20,
+    gap: 12,
+    color: '#616161',
+    hoverColor: '#ffffff',
+    hoverShift: 8,
+    hoverDuration: 400,
+    mobileGap: 16,
+    mobileFontSize: 16,
+    mobileLineHeight: 24,
+  },
+  about: {
+    showHeading: false,
+    headingSize: 16,
+    headingWeight: '400',
+    headingLineHeight: 16,
+    headingColor: '#404040',
+    headingGap: 12,
+    bodySize: 16,
+    bodyWeight: '300',
+    bodyLineHeight: 24,
+    bodyColor: '#ffffff',
+    paragraphGap: 16,
+  },
+  experience: {
+    gapFromAbout: 48,
+    rowGap: 20,
+    rowLineHeight: 24,
+    orgRoleGap: 4,
+    orgSize: 16,
+    orgWeight: '300',
+    orgColor: '#ffffff',
+    roleSize: 16,
+    roleWeight: '300',
+    roleColor: '#616161',
+    logoSize: 40,
+    logoRadius: 8,
+    hoverShift: 12,
+    hoverDuration: 400,
+  },
+  particles: {
+    enabled: true,
+    gap: 4,
+    size: 3,
+    entrySpread: 1200,
+    entryStagger: 3000,
+    entryFade: 250,
+    stirRadius: 120,
+    stirStrength: 2,
+    stiffness: 170,
+    damping: 9,
+    bleed: 100,
+    cornerRadius: 4,
+    swapDuration: 700,
+    swapScatter: 150,
+    swapSwirl: 1400,
+    swapChaos: 700,
+  },
+}
+
 export default function AboutV2() {
-  // Bumped by the Replay dial action to re-run the particle entry animation.
-  const [replayKey, setReplayKey] = useState(0)
   // 0 = resting portrait; i + 1 = the i-th experience's photo.
   const [activePhoto, setActivePhoto] = useState(0)
   const isMobile = useMediaQuery(MOBILE_QUERY)
 
-  const dial = useDialKit(
-    'About',
-    {
-      layout: {
-        margin: [48, 0, 96],
-        navGap: [36, 0, 96],
-        photoRadius: [12, 0, 48],
-        mobileMargin: [20, 0, 96],
-        mobileNavGap: [72, 0, 200, 1],
-        mobilePhotoGap: [48, 0, 96],
-        background: '#0F0F0F',
-      },
-      columnWidth: {
-        // Width = the window-width ratio, held between min and max.
-        // Set min and max to the same number for a fixed-width column.
-        ratio: [0.24, 0.05, 0.5, 0.005],
-        min: [440, 80, 720],
-        max: [720, 160, 960],
-      },
-      contact: {
-        _collapsed: true,
-        fontSize: [13, 8, 32, 0.5],
-        fontWeight: weight(300),
-        lineHeight: [20, 8, 48],
-        gap: [12, 0, 48],
-        color: '#616161',
-        hoverColor: '#ffffff',
-        hoverShift: [8, 0, 24],
-        hoverDuration: [400, 0, 1000],
-        mobileGap: [16, 0, 48],
-        mobileFontSize: [16, 8, 32, 0.5],
-        mobileLineHeight: [24, 8, 48],
-      },
-      about: {
-        _collapsed: true,
-        showHeading: false,
-        headingSize: [16, 8, 32, 0.5],
-        headingWeight: weight(400),
-        headingLineHeight: [16, 8, 48],
-        headingColor: '#404040',
-        headingGap: [12, 0, 48],
-        bodySize: [16, 8, 32, 0.5],
-        bodyWeight: weight(300),
-        bodyLineHeight: [24, 8, 48],
-        bodyColor: '#ffffff',
-        paragraphGap: [16, 0, 48],
-      },
-      experience: {
-        _collapsed: true,
-        gapFromAbout: [48, 0, 96],
-        rowGap: [20, 0, 48],
-        rowLineHeight: [24, 8, 48],
-        orgRoleGap: [4, 0, 32],
-        orgSize: [16, 8, 32, 0.5],
-        orgWeight: weight(300),
-        orgColor: '#ffffff',
-        roleSize: [16, 8, 32, 0.5],
-        roleWeight: weight(300),
-        roleColor: '#616161',
-        logoSize: [40, 12, 64],
-        logoRadius: [8, 0, 32],
-        hoverShift: [12, 0, 24],
-        hoverDuration: [400, 0, 1000],
-      },
-      particles: {
-        _collapsed: true,
-        enabled: true,
-        gap: [4, 2, 10, 1],
-        size: [3, 1, 8, 0.5],
-        entrySpread: [1200, 0, 2000],
-        entryStagger: [3000, 0, 5000],
-        entryFade: [250, 50, 1500],
-        stirRadius: [120, 20, 320],
-        stirStrength: [2, 0, 4, 0.05],
-        stiffness: [170, 10, 400],
-        damping: [9, 1, 40],
-        bleed: [100, 0, 400],
-        cornerRadius: [4, 0, 4, 0.25],
-        swapDuration: [700, 100, 3000],
-        swapScatter: [150, 0, 2000],
-        swapSwirl: [1400, 0, 6000],
-        swapChaos: [700, 0, 4000],
-        replay: { type: 'action' },
-      },
-    },
-    {
-      id: 'about-v2',
-      persist: true,
-      onAction: (path) => {
-        if (path.endsWith('replay')) setReplayKey((k) => k + 1)
-      },
-    },
-  )
-
-  const { layout, columnWidth, contact, about, experience, particles } = dial
+  const { layout, columnWidth, contact, about, experience, particles } = ABOUT_SETTINGS
 
   const style = {
     '--dp-about-margin': `${layout.margin}px`,
@@ -298,7 +274,6 @@ export default function AboutV2() {
             activeIndex={activePhoto}
             params={particles}
             radius={layout.photoRadius}
-            replayKey={replayKey}
           />
         ) : (
           /* Phones get the plain photo: no canvas, no swap, and only this one

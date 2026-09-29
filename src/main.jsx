@@ -11,14 +11,11 @@ if (import.meta.env.DEV) {
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { DialRoot } from 'dialkit'
 import App from './App'
-import 'dialkit/styles.css'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
-    <DialRoot />
   </React.StrictMode>,
 )

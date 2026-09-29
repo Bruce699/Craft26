@@ -4,8 +4,7 @@
    top-aligns and bottom-aligns to that same frame. The 48px margin matches the
    craft grid's horizontal edge padding (FeedGrid.jsx DEFAULT_H_PADDING).
 
-   Every tunable reads --dp-about-* so the DialKit panel in AboutV2.jsx can
-   drive it live. The fallbacks are the shipped design values. */
+   Design values come from the static --dp-about-* properties in AboutV2.jsx. */
 
 .about-v2 {
   --about-nav-top: 40px;      /* .nav-pill top */
@@ -184,7 +183,7 @@
 
 @media (max-width: 768px) {
   .about-v2 {
-    /* Mobile gets its own nav gap, so the desktop dial stays independent. */
+    /* Mobile uses its own navigation gap. */
     --about-frame-top: calc(
       var(--about-nav-top) + var(--about-nav-height) +
         var(--dp-about-mobile-nav-gap, 72px)

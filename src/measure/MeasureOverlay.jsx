@@ -1,78 +1,75 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { useDialKit } from 'dialkit'
 import './MeasureOverlay.css'
 import { listenForHold } from './holdKey'
 import { createMediaTransition } from './mediaTransition'
 import { setMotionRate } from './motionClock'
 
-const config = {
+// Fixed preview settings. Measurement guides remain disabled.
+const settings = {
   enabled: true,
   showMeasurements: false,
   pinOverlay: false,
-  holdDelay: [350, 0, 1500, 10],
-  opacity: [1, 0, 1, 0.01],
+  holdDelay: 350,
+  opacity: 1,
   dimColor: '#000000',
-  fontWeight: [500, 100, 900, 100],
-  dimPage: [1, 0, 1, 0.01],
+  fontWeight: 500,
+  dimPage: 1,
   pixelGrid: {
-    _collapsed: true,
     visible: true,
     color: '#2684ff',
-    opacity: [0.3, 0, 1, 0.01],
-    cellSize: [8, 1, 64, 1],
-    lineWidth: [0.5, 0.1, 3, 0.1],
-    majorEvery: [8, 2, 20, 1],
-    majorWidth: [1, 0.1, 4, 0.1],
-    majorOpacity: [0.65, 0, 1, 0.01],
-    offsetX: [0, -100, 100, 1],
-    offsetY: [0, -100, 100, 1],
+    opacity: 0.3,
+    cellSize: 8,
+    lineWidth: 0.5,
+    majorEvery: 8,
+    majorWidth: 1,
+    majorOpacity: 0.65,
+    offsetX: 0,
+    offsetY: 0,
     followScroll: true,
   },
   layout: {
-    _collapsed: true,
     visible: true,
     color: '#4598ff',
-    opacity: [0.95, 0, 1, 0.01],
-    columnFill: [0.035, 0, 0.5, 0.005],
+    opacity: 0.95,
+    columnFill: 0.035,
     showColumns: true,
     showPadding: true,
     showGaps: true,
     showRowGaps: true,
     showTopPadding: true,
     guides: true,
-    lineWidth: [1, 0.25, 4, 0.25],
-    arrowSize: [4, 1, 12, 0.5],
-    rulerY: [114, 20, 300, 1],
-    gapLabelOffset: [25, 10, 100, 1],
-    rowGapLabelOffset: [48, -150, 150, 1],
-    topLabelOffset: [30, 0, 150, 1],
-    topRulerX: [25, 10, 100, 1],
-    fontSize: [10, 6, 22, 0.5],
-    labelPadding: [5, 0, 16, 1],
-    labelRadius: [3, 0, 16, 1],
+    lineWidth: 1,
+    arrowSize: 4,
+    rulerY: 114,
+    gapLabelOffset: 25,
+    rowGapLabelOffset: 48,
+    topLabelOffset: 30,
+    topRulerX: 25,
+    fontSize: 10,
+    labelPadding: 5,
+    labelRadius: 3,
     labelBackground: '#08162a',
-    labelOpacity: [0.95, 0, 1, 0.01],
-    decimals: [0, 0, 2, 1],
+    labelOpacity: 0.95,
+    decimals: 0,
   },
   cardBounds: {
-    _collapsed: true,
     visible: true,
     color: '#69acff',
-    opacity: [0.95, 0, 1, 0.01],
+    opacity: 0.95,
     showBounds: true,
     showCornerCircles: true,
     showRadiusLabels: true,
     showDimensions: false,
-    lineWidth: [1, 0.25, 4, 0.25],
-    lineExtension: [10, 0, 60, 1],
-    circleLineWidth: [1, 0.25, 4, 0.25],
+    lineWidth: 1,
+    lineExtension: 10,
+    circleLineWidth: 1,
     circleFill: '#08162a',
-    circleFillOpacity: [0.65, 0, 1, 0.01],
-    radiusFontSize: [7, 4, 18, 0.5],
+    circleFillOpacity: 0.65,
+    radiusFontSize: 7,
     radiusLabelColor: '#b5d6ff',
     radiusPrefix: true,
-    dimensionsFontSize: [10, 6, 20, 1],
-    dimensionsOffset: [12, 0, 50, 1],
+    dimensionsFontSize: 10,
+    dimensionsOffset: 12,
   },
 }
 
@@ -83,7 +80,7 @@ const rectangle = element => {
 }
 
 export default function MeasureOverlay() {
-  const p = useDialKit('Blueprint · hold A', config)
+  const p = settings
   const [pressed, setPressed] = useState(false)
   const backdropRef = useRef(null)
   const transitionRef = useRef(null)
