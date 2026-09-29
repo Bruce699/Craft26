@@ -1,0 +1,20 @@
+.measure-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-weight: 500;
+}
+
+.measure-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Above the root background, below every card and navigation element. */
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}

@@ -79,6 +79,7 @@ export default function FeedGrid({
                   rowIndex < (isMobile ? MOBILE_ENTRY_ROWS : DESKTOP_ENTRY_ROWS)
                 }
                 playbackId={item.playbackId}
+                thumbnail={item.thumbnail}
                 name={item.name}
                 date={item.date}
                 phase={phase}

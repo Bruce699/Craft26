@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { feedColumns } from '../data/feedData'
 
-// Parse "April 2026" -> absolute month index (year * 12 + monthIndex)
+// Parse "Apr 2026" (or "April 2026") -> absolute month index (year * 12 + monthIndex)
 function parseMonthYear(str) {
   const months = {
-    January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
-    July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
   }
   const [month, year] = str.split(' ')
-  return Number(year) * 12 + (months[month] ?? 0)
+  return Number(year) * 12 + (months[month.slice(0, 3)] ?? 0)
 }
 
 // Actual coordinate values per item:

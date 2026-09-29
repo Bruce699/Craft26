@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import '@mux/mux-video'
 import './VideoCard.css'
+import { scheduleMotionTimeout } from '../measure/motionClock'
 
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
@@ -27,6 +28,7 @@ export default function VideoCard({
   entranceIndex = 0,
   animateEntry = true,
   playbackId,
+  thumbnail,
   name,
   date,
   phase = 'feed',
@@ -56,7 +58,9 @@ export default function VideoCard({
   const cardRef = useRef(null)
   const originalRectRef = useRef(null)
   const initiallyInViewportRef = useRef(false)
-  const entranceTimerRef = useRef(0)
+  const entranceTimerRef = useRef(null)
+  const entrancePrepareFrameRef = useRef(null)
+  const entranceRevealFrameRef = useRef(null)
   const dragStartRef = useRef({ x: 0, y: 0 })
   const dragMovedRef = useRef(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -149,17 +153,31 @@ export default function VideoCard({
     })
   }
 
+  const cancelEntry = useCallback(() => {
+    entranceTimerRef.current?.()
+    entranceTimerRef.current = null
+    if (entrancePrepareFrameRef.current !== null) cancelAnimationFrame(entrancePrepareFrameRef.current)
+    if (entranceRevealFrameRef.current !== null) cancelAnimationFrame(entranceRevealFrameRef.current)
+    entrancePrepareFrameRef.current = null
+    entranceRevealFrameRef.current = null
+  }, [])
+
   const scheduleEntry = useCallback((offset, delay) => {
-    window.clearTimeout(entranceTimerRef.current)
+    cancelEntry()
     setEntryOffset(typeof offset === 'number' ? `${offset}px` : offset)
     setEntryState('pending')
-    requestAnimationFrame(() => {
+    entrancePrepareFrameRef.current = requestAnimationFrame(() => {
+      entrancePrepareFrameRef.current = null
       setEntryState('ready')
-      entranceTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => setEntryState('visible'))
+      entranceTimerRef.current = scheduleMotionTimeout(() => {
+        entranceTimerRef.current = null
+        entranceRevealFrameRef.current = requestAnimationFrame(() => {
+          entranceRevealFrameRef.current = null
+          setEntryState('visible')
+        })
       }, delay)
     })
-  }, [])
+  }, [cancelEntry])
 
   useEffect(() => {
     const el = rootRef.current
@@ -204,9 +222,9 @@ export default function VideoCard({
     observer.observe(el)
     return () => {
       observer.disconnect()
-      window.clearTimeout(entranceTimerRef.current)
+      cancelEntry()
     }
-  }, [phase, posterLoaded, entranceIndex, scheduleEntry])
+  }, [phase, posterLoaded, entranceIndex, scheduleEntry, cancelEntry])
 
   // Snapshot the card's viewport rect while it's still in normal feed layout.
   // Once transforms kick in, getBoundingClientRect would return the *moved*
@@ -685,7 +703,7 @@ export default function VideoCard({
       >
         <img
           className="video-card__poster"
-          src={`/thumbnails/png/${encodeURIComponent(posterName)}.png`}
+          src={thumbnail ?? `/thumbnails/png/${encodeURIComponent(posterName)}.png`}
           alt=""
           onLoad={handlePosterLoad}
           onError={handlePosterLoad}

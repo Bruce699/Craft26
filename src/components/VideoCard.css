@@ -59,6 +59,7 @@ body.is-mobile-focus-exiting .video-card {
 /* Inner outline as a pseudo-element so it never affects layout size.
    Only shown after the card is loaded — no empty outlined placeholders. */
 .video-card--loaded::after {
+  display: none;
   content: '';
   position: absolute;
   inset: 0;

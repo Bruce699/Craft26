@@ -5,6 +5,8 @@ import CoordinateScene from './coordinate/CoordinateScene'
 import AboutV2 from './about/AboutV2'
 import { useCoordinatePoints } from './coordinate/useCoordinateData'
 import './App.css'
+import MeasureOverlay from './measure/MeasureOverlay'
+import { scheduleMotionTimeout } from './measure/motionClock'
 
 // Transition phases:
 //   feed         → normal grid
@@ -114,8 +116,8 @@ export default function App() {
 
   useEffect(() => {
     if (!desktopFocus || !desktopFocus.exiting) return
-    const t = setTimeout(() => setDesktopFocus(null), DESKTOP_FOCUS_EXIT_MS)
-    return () => clearTimeout(t)
+    const cancel = scheduleMotionTimeout(() => setDesktopFocus(null), DESKTOP_FOCUS_EXIT_MS)
+    return cancel
   }, [desktopFocus])
 
   // Lock page scroll while a card is desktop-focused so the fixed-position
@@ -133,14 +135,14 @@ export default function App() {
 
   useEffect(() => {
     if (!mobileFocus || !mobileFocus.exiting) return
-    const t = setTimeout(() => setMobileFocus(null), MOBILE_FOCUS_EXIT_MS)
-    return () => clearTimeout(t)
+    const cancel = scheduleMotionTimeout(() => setMobileFocus(null), MOBILE_FOCUS_EXIT_MS)
+    return cancel
   }, [mobileFocus])
 
   useEffect(() => {
     if (!mobileFocus || mobileFocus.exiting) return
     if (mobileFocus.phase !== 'enter' && mobileFocus.phase !== 'anim') return
-    const t = setTimeout(() => {
+    const cancel = scheduleMotionTimeout(() => {
       setMobileFocus((current) => {
         if (!current || current.exiting) return current
         if (current.id !== mobileFocus.id || current.phase !== mobileFocus.phase) return current
@@ -152,7 +154,7 @@ export default function App() {
         }
       })
     }, MOBILE_FOCUS_TRANSITION_MS)
-    return () => clearTimeout(t)
+    return cancel
   }, [mobileFocus])
 
   const isAboutPage = page === 'about'
@@ -228,29 +230,29 @@ export default function App() {
     }
   }, [isMobile, mobileFocus])
 
-  // Phase timing. We advance phase via setTimeout so CSS transitions can run
-  // in sequence without fighting each other.
+  // Advance phases on the same clock as card animations, including blackout
+  // slow motion, so the next phase never cuts off a transition.
   useEffect(() => {
     if (phase === 'exploding') {
-      const t = setTimeout(() => setPhase('centering'), PHASE_DURATIONS.exploding)
-      return () => clearTimeout(t)
+      const cancel = scheduleMotionTimeout(() => setPhase('centering'), PHASE_DURATIONS.exploding)
+      return cancel
     }
     if (phase === 'centering') {
-      const t = setTimeout(() => setPhase('coordinate'), PHASE_DURATIONS.centering)
-      return () => clearTimeout(t)
+      const cancel = scheduleMotionTimeout(() => setPhase('coordinate'), PHASE_DURATIONS.centering)
+      return cancel
     }
     if (phase === 'uncentering') {
-      const t = setTimeout(() => setPhase('unexploding'), PHASE_DURATIONS.uncentering)
-      return () => clearTimeout(t)
+      const cancel = scheduleMotionTimeout(() => setPhase('unexploding'), PHASE_DURATIONS.uncentering)
+      return cancel
     }
     if (phase === 'unexploding') {
-      const t = setTimeout(() => {
+      const cancel = scheduleMotionTimeout(() => {
         setPhase('feed')
         setOriginId(null)
         setOriginRect(null)
         setSceneZoom(1)
       }, PHASE_DURATIONS.unexploding)
-      return () => clearTimeout(t)
+      return cancel
     }
   }, [phase])
 
@@ -268,6 +270,7 @@ export default function App() {
 
   return (
     <>
+      {!isAboutPage && <MeasureOverlay />}
       {phase === 'feed' && <Nav currentPage={page} />}
       {isAboutPage ? (
         <AboutV2 />

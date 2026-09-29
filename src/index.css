@@ -60,6 +60,8 @@ body {
 }
 
 #root {
+  /* Keep the A-key background layer behind content, above the root fill. */
+  isolation: isolate;
   min-height: 100vh;
   background-color: #0F0F0F;
 }
