@@ -151,13 +151,14 @@ test('animations created while slow join the rate and removed animations are res
   assert.equal(clock.frames.size, 0)
 })
 
-test('discovery includes card/focus descendants and pseudo effects but excludes other UI', () => {
+test('discovery includes cards, navigation, focus UI and pseudo effects but excludes other UI', () => {
   const card = { closest: (selector) => selector.includes('.video-card') ? {} : null }
+  const nav = { closest: (selector) => selector.split(', ').includes('.nav-pill') ? {} : null }
   const focusLabel = { closest: (selector) => selector.includes('.desktop-focus-labels') ? {} : null }
   const unrelated = { closest: () => null }
-  const effects = [card, focusLabel, { element: card }, unrelated, null]
+  const effects = [card, nav, focusLabel, { element: card }, unrelated, null]
     .map((target) => ({ effect: { target } }))
-  assert.deepEqual(findPageMotionAnimations({ getAnimations: () => effects }), effects.slice(0, 3))
+  assert.deepEqual(findPageMotionAnimations({ getAnimations: () => effects }), effects.slice(0, 4))
 })
 
 test('canceling the last normal-speed timer stops RAF immediately', () => {

@@ -1,6 +1,7 @@
 const motionSelector = [
   '.video-card',
   '.video-card-shell',
+  '.nav-pill',
   '.desktop-focus-overlay',
   '.desktop-focus-labels',
   '.desktop-focus-label',
@@ -8,7 +9,7 @@ const motionSelector = [
   '.mobile-focus-label',
 ].join(', ')
 
-/** CSS motion for cards and their focus UI; page fades and tuning UI are excluded. */
+/** CSS motion for cards, navigation and focus UI; page fades and tuning UI are excluded. */
 export function findPageMotionAnimations(root = globalThis.document) {
   return root.getAnimations().filter((animation) => {
     const target = animation.effect?.target
