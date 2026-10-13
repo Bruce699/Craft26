@@ -1,6 +1,6 @@
 // Feed is structured as a 2D array: feedColumns[colIndex][rowIndex]
-// Each item's id encodes its grid position as c{col}r{row} (1-indexed)
-// so feedColumns[0][1] has id "c1r2" — ready for spatial labeling later.
+// Array order defines the visible columns and rows. Item IDs remain stable
+// when pieces move, so an ID may differ from its current grid position.
 
 export const feedColumns = [
   // Column 1
@@ -8,19 +8,21 @@ export const feedColumns = [
     { id: 'c2r2', playbackId: '2BPUc02BHPCilYGFASb6QuU4E9F02wiMefxaFBENtixcc', name: 'Self-disciplined Agent', date: 'Feb 2026' },
     { id: 'c1r2', playbackId: 'CUu6M78DlOsa6QartKzyLiovgQVBhPWT2utVWB4S602I', name: 'Strings Todo', date: 'Apr 2026' },
     { id: 'iceman', playbackId: 'TZIV6Je5WM01izWJITCDMMfHgb8H3gxOwC00DhwsH2lj4', name: 'Iceman', date: 'Jul 2026' },
-    { id: 'c1r3', playbackId: '01BF5k6garBSE8SG9PqQMRUw5Qe01mlefVYY9biwa49DQ', name: 'Base44 Transition', date: 'Jun 2026' },
     { id: 'c1r4', playbackId: 'vGHsk01Ymm8901Z8c9IFbVrlU00R637eK6NX00nDNWZEpeQ', name: 'Growing Pattern', date: 'Apr 2026' },
+    { id: 'c1r3', playbackId: '01BF5k6garBSE8SG9PqQMRUw5Qe01mlefVYY9biwa49DQ', name: 'Base44 Transition', date: 'Jun 2026' },
     { id: 'c1r5', playbackId: 'ZBAXXn5AAt3DGWG9lp9vzl00JYOyEhTYwO43uYi4SOe00', name: 'Hike Your Todos - Widget', date: 'May 2026' },
     { id: 'c1r6', playbackId: 'ELlGYEvzC4fyj02nuHDL02VnghBSXT71vdO4blWr4r7Sg', name: 'Cards for Onboarding', date: 'Mar 2026' },
     { id: 'c1r7', playbackId: 'jR01HgIlum91aQlmQLeTu9b02V9YsIKRfHJMBrVWoMSoM', name: 'Info Card Generation', date: 'Oct 2025' },
     { id: 'c1r8', playbackId: 'kUW1DHzuaQMcegeJI9sHXlGXxU00DxZH00YjaYsUFMOqg', name: 'Conceptual UI', date: 'Jan 2026' },
     { id: 'c1r9', playbackId: 'g59o3r8T005Q01GNj3Y00wXISpDM00FwVVPxi00Gx3EI1Qo4', name: 'AI Brush', date: 'Oct 2025' },
+    { id: 'c2r9', playbackId: '01nPlGYjmGSakKAoHKgv5uxzD018RRfJGhCXjk9jMwmSo', name: 'Gaze Tracking in VR', date: 'Mar 2025' },
   ],
   // Column 2
   [
     { id: 'sneaker-pants', playbackId: 'K22TndfTOAfZoH3alYKTE2ltM7PLp6aipOXly1mcS9g', name: 'Sneaker-Pants Preview', date: 'Sep 2026' },
     { id: 'c2r1', playbackId: 'g6EJ015Yax00Kl70202LZdK014r4bSdm1SWTvmZzQTeMIHyU', name: 'Hike Your Todos', date: 'Apr 2026' },
-    { id: 'september-reel', playbackId: 'Y9RtPtRvV4IBmHHubITxCtoRVPm2f7FRl2RljjluUS8', name: 'Shopify Sizzle', date: 'Sep 2026', thumbnail: '/thumbnails/png/september-reel.png' },
+    { id: 'c3r1', playbackId: 'HhLOV02iqHFt5Mp02Gm00C8FvAMZzh02Cc602kVxki22Q8PA', name: 'Live Motion Panel', date: 'Nov 2025' },
+    { id: 'september-reel', playbackId: 'Y9RtPtRvV4IBmHHubITxCtoRVPm2f7FRl2RljjluUS8', name: 'Shopify Sizzle', date: 'Sep 2026' },
     { id: 'c1r1', playbackId: 'Blbhj8GsinBk01vt9Afs4Q1g9xbSwrsLkQoFTIUohBDE', name: 'Cursor-Follow Lamp', date: 'Nov 2025' },
     { id: 'c2r3', playbackId: 'YjDjAU7P3KanZw2kA5pAF02IaQuxYiHierePucxTJsHU', name: 'Contextual Search', date: 'Sep 2025' },
     { id: 'c2r4', playbackId: 'lkOFeA9rDgNGQdyzB77FWIftopmsbhKO00SOcLAnsP00c', name: 'Card Swipe Interaction', date: 'Mar 2026' },
@@ -29,11 +31,10 @@ export const feedColumns = [
     { id: 'c2r7', playbackId: '3JOGAkFHWi02xCaKKOK3LpeIDhvqIaMr8yYgrINmZakI', name: 'Bookmark Info Cards', date: 'Sep 2025' },
     { id: 'c2r8', playbackId: 'FA1OaJpIvpOcx1Q8y9apfRi8wDU011c302fk8XU6aParA', name: 'iOS Exit', date: 'Aug 2025' },
     { id: 'c1r10', playbackId: 'Mc47Cwar3gkxxixSkaWVvREWtzMpa89u6N02KNOal02wc', name: 'Generative Maze in VR', date: 'Feb 2025' },
-    { id: 'c2r9', playbackId: '01nPlGYjmGSakKAoHKgv5uxzD018RRfJGhCXjk9jMwmSo', name: 'Gaze Tracking in VR', date: 'Mar 2025' },
   ],
   // Column 3
   [
-    { id: 'c3r1', playbackId: 'HhLOV02iqHFt5Mp02Gm00C8FvAMZzh02Cc602kVxki22Q8PA', name: 'Live Motion Panel', date: 'Nov 2025' },
+    { id: 'new-piece', playbackId: 'gCPJzLckdVoloVoY6hWd2gyYOEu01SRCrCIqLmwsRay4', name: 'Scene Stitching Tool', date: 'Oct 2026' },
     { id: 'c3r2', playbackId: '3c1s0200p700trXkIv1qb01dXi3diIsIkQ5m5pddujR2Sq8', name: 'Battle Bar', date: 'Oct 2025' },
     { id: 'c3r3', playbackId: '8AZ01lFBOOxlehVCCvnYwrkGo02jNhsqR9PfcSDcCqYq00', name: 'Superpower Referral Cards', date: 'May 2026' },
     { id: 'c3r4', playbackId: 'EvNW2VazFMZ015FETD7wBt01mM01WPsZz0202gjhGPp57w8E', name: 'Undo Todo', date: 'Apr 2026' },
@@ -48,12 +49,12 @@ export const feedColumns = [
 ]
 
 // Mobile layout: 2 columns (MC1, MC2). Each entry references an item in
-// feedColumns by its cxry id so there's a single source of truth for content.
+// feedColumns by its stable ID so there's a single source of truth for content.
 const itemById = new Map(feedColumns.flat().map((item) => [item.id, item]))
 const mobileOrder = [
   // MC1 top → bottom
-  ['c3r3', 'c2r2', 'c1r2', 'c1r1', 'c3r4', 'c3r7', 'c1r4', 'c2r6', 'c3r5', 'c1r7', 'c1r8', 'c3r8', 'c2r8', 'c2r10', 'c3r10'],
+  ['new-piece', 'c3r3', 'c2r2', 'c1r2', 'c1r1', 'c3r4', 'c3r7', 'c1r4', 'c2r6', 'c3r5', 'c1r7', 'c1r8', 'c3r8', 'c2r8', 'c2r10', 'c3r10', 'c3r9', 'c1r10', 'c2r9'],
   // MC2 top → bottom
-  ['sneaker-pants', 'iceman', 'september-reel', 'c2r1', 'c1r5', 'c1r3', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5', 'c3r9', 'c1r10', 'c2r9'],
+  ['sneaker-pants', 'iceman', 'september-reel', 'c2r1', 'c1r5', 'c1r3', 'c3r1', 'c1r6', 'c3r2', 'c2r4', 'c2r3', 'c3r6', 'c1r9', 'c2r7', 'c2r5'],
 ]
 export const mobileFeedColumns = mobileOrder.map((ids) => ids.map((id) => itemById.get(id)))

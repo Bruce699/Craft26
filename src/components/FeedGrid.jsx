@@ -72,14 +72,13 @@ export default function FeedGrid({
           >
             {column.map((item, rowIndex) => (
               <VideoCard
-                key={item.id}
+                key={`${item.id}:${item.playbackId}`}
                 id={item.id}
                 entranceIndex={rowIndex * numCols + colIndex}
                 animateEntry={
                   rowIndex < (isMobile ? MOBILE_ENTRY_ROWS : DESKTOP_ENTRY_ROWS)
                 }
                 playbackId={item.playbackId}
-                thumbnail={item.thumbnail}
                 name={item.name}
                 date={item.date}
                 phase={phase}

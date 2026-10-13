@@ -3,12 +3,16 @@ import { feedColumns } from '../data/feedData'
 
 // Parse "Apr 2026" (or "April 2026") -> absolute month index (year * 12 + monthIndex)
 function parseMonthYear(str) {
+  if (typeof str !== 'string') return null
   const months = {
     Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
     Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
   }
   const [month, year] = str.split(' ')
-  return Number(year) * 12 + (months[month.slice(0, 3)] ?? 0)
+  const monthIndex = months[month?.slice(0, 3)]
+  const numericYear = Number(year)
+  if (monthIndex === undefined || !Number.isFinite(numericYear)) return null
+  return numericYear * 12 + monthIndex
 }
 
 // Actual coordinate values per item:
@@ -78,26 +82,29 @@ export function useCoordinatePoints() {
   return useMemo(() => {
     const items = feedColumns.flat()
     const months = items.map((i) => parseMonthYear(i.date))
-    const earliest = Math.min(...months)
-    const latest = Math.max(...months)
+    const datedMonths = months.filter(Number.isFinite)
+    const earliest = Math.min(...datedMonths)
+    const latest = Math.max(...datedMonths)
     const monthSpan = Math.max(1, latest - earliest)
 
     const xPxPerLevel = (viewport.w * X_WIDTH_RATIO) / X_LEVEL_SPAN
     const zPxPerMonth = (viewport.w * Z_WIDTH_RATIO) / monthSpan
     const yPxPerStep = (viewport.h * Y_HEIGHT_RATIO) / Y_INDEX_SPAN
 
-    return items.map((item) => {
+    return items.map((item, index) => {
       const coord = ITEM_COORDS[item.id] ?? { x: 0, y: 0 }
       const xLevel = X_LEVEL_INDEX.get(coord.x) ?? 0
       return {
         id: item.id,
+        playbackId: item.playbackId,
         name: item.name,
         date: item.date,
         hours: coord.x,
         procIndex: coord.y,
         x: xLevel * xPxPerLevel,
         y: (coord.y - Y_MIN_INDEX) * yPxPerStep,
-        z: (parseMonthYear(item.date) - earliest) * zPxPerMonth,
+        // Undated work stays in the data and defaults to the latest dated slot.
+        z: ((months[index] ?? latest) - earliest) * zPxPerMonth,
       }
     })
   }, [viewport.w, viewport.h])

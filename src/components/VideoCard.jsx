@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import '@mux/mux-video'
 import './VideoCard.css'
 import { scheduleMotionTimeout } from '../measure/motionClock'
+import { getVideoThumbnailUrl } from '../data/videoThumbnails'
 
 const VISIBILITY_THRESHOLD = 0.3
 const EXPLOSION_DISTANCE = 1600 // px to fly outward
@@ -18,17 +19,11 @@ const MOBILE_DRAG_EXIT_DISTANCE = 56
 const FOCUS_BACKGROUND_SCALE = 0.92
 const FOCUS_EASING = 'cubic-bezier(0.5, 0, 0, 1)'
 
-const PNG_THUMBNAIL_NAME_OVERRIDES = {
-  'Hike Your Todos - Widget': 'Hike Your Todos',
-  'Superpower Referral Cards': 'Superpower Referral Card',
-}
-
 export default function VideoCard({
   id,
   entranceIndex = 0,
   animateEntry = true,
   playbackId,
-  thumbnail,
   name,
   date,
   phase = 'feed',
@@ -74,8 +69,8 @@ export default function VideoCard({
     dragging: false,
   })
   const [videoReady, setVideoReady] = useState(false)
+  const [posterAspectRatio, setPosterAspectRatio] = useState(null)
   const [videoAspectRatio, setVideoAspectRatio] = useState(null)
-  const isVideoSizedCard = id === 'c3r1'
 
   const getMobileFocusTransform = (rect) => {
     const cx = rect.left + rect.width / 2
@@ -147,7 +142,11 @@ export default function VideoCard({
   // below has actually rendered. Double rAF guarantees the hidden initial
   // state is painted once before the class flip, so cached posters don't
   // "pop in" without a transition.
-  const handlePosterLoad = () => {
+  const handlePosterLoad = (event) => {
+    const image = event.currentTarget
+    if (image.naturalWidth && image.naturalHeight) {
+      setPosterAspectRatio(image.naturalWidth / image.naturalHeight)
+    }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setPosterLoaded(true))
     })
@@ -676,12 +675,10 @@ export default function VideoCard({
 
   const cardStyle = {
     '--entry-offset': entryOffset,
+    // Keep a usable frame while the poster loads, or if it fails.
+    aspectRatio: String(videoAspectRatio ?? posterAspectRatio ?? 16 / 9),
     ...(transitionStyle ?? {}),
-    ...(isVideoSizedCard && videoAspectRatio
-      ? { aspectRatio: String(videoAspectRatio) }
-      : {}),
   }
-  const posterName = PNG_THUMBNAIL_NAME_OVERRIDES[name] ?? name
 
   return (
     <div
@@ -692,7 +689,7 @@ export default function VideoCard({
     >
       <div
         ref={cardRef}
-        className={`video-card ${isVideoSizedCard && videoAspectRatio ? 'video-card--video-sized' : ''} ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'pending' ? 'video-card--entry-pending' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''} ${isDesktopFocused && desktopFocusExiting ? 'video-card--desktop-focus-exiting' : ''}`}
+        className={`video-card ${isOrigin ? 'video-card--origin' : ''} ${posterLoaded ? 'video-card--loaded' : ''} ${entryState === 'pending' ? 'video-card--entry-pending' : ''} ${entryState === 'visible' ? 'video-card--entry-visible' : ''} ${videoReady ? 'video-card--video-ready' : ''} ${isMobileFocused && !mobileFocusExiting ? 'video-card--mobile-focused' : ''} ${isMobileFocusPrevious ? 'video-card--mobile-focus-prev' : ''} ${isDesktopFocused ? 'video-card--desktop-focused' : ''} ${isDesktopFocused && desktopFocusExiting ? 'video-card--desktop-focus-exiting' : ''}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onPointerDown={handlePointerDown}
@@ -703,7 +700,7 @@ export default function VideoCard({
       >
         <img
           className="video-card__poster"
-          src={thumbnail ?? `/thumbnails/png/${encodeURIComponent(posterName)}.png`}
+          src={getVideoThumbnailUrl(playbackId)}
           alt=""
           onLoad={handlePosterLoad}
           onError={handlePosterLoad}

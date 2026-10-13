@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Billboard } from '@react-three/drei'
 import * as THREE from 'three'
+import { getVideoThumbnailUrl } from '../data/videoThumbnails'
 import './CoordinateScene.css'
 
 const AXIS_COLOR = '#4A4A4A'
@@ -22,7 +23,6 @@ const MINIMAP_IDLE_OPACITY = 0.6
 const MINIMAP_VERTICAL_LABEL_THRESHOLD = 0.24
 const MINIMAP_Y_LABEL_GAP = 3
 const MINIMAP_Y_LABEL_ABOVE_AXIS = 6
-const COORDINATE_THUMBNAIL_VERSION = '2026-04-22-icebreaker-fix'
 
 // cubic-bezier(0.5, 0, 0, 1) solver — same curve as the DOM transitions
 function makeCubicBezier(p1x, p1y, p2x, p2y) {
@@ -153,6 +153,34 @@ function Axes({ exiting }) {
   )
 }
 
+function createBlurredThumbnail(image, displayWidth) {
+  const iw = image.naturalWidth || image.width
+  const ih = image.naturalHeight || image.height
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(displayWidth * 2))
+  canvas.height = Math.max(1, Math.round(canvas.width * ih / iw))
+  const blur = 8 * canvas.width / displayWidth
+  const padding = Math.ceil(blur * 4)
+  const padded = document.createElement('canvas')
+  padded.width = canvas.width + padding * 2
+  padded.height = canvas.height + padding * 2
+  const source = padded.getContext('2d')
+  // Extend the edge pixels before blurring so the frame stays opaque.
+  const columns = [[0, 1, 0, padding], [0, iw, padding, canvas.width], [iw - 1, 1, padding + canvas.width, padding]]
+  const rows = [[0, 1, 0, padding], [0, ih, padding, canvas.height], [ih - 1, 1, padding + canvas.height, padding]]
+  for (const [sx, sw, dx, dw] of columns) {
+    for (const [sy, sh, dy, dh] of rows) {
+      source.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh)
+    }
+  }
+  const context = canvas.getContext('2d')
+  context.filter = `blur(${blur}px)`
+  context.drawImage(padded, -padding, -padding)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
 function ThumbnailBillboard({ url, position, width, delay, exiting, selected, onSelect }) {
   const [texture, setTexture] = useState(null)
   const [height, setHeight] = useState(width)
@@ -172,18 +200,14 @@ function ThumbnailBillboard({ url, position, width, delay, exiting, selected, on
   useEffect(() => {
     let cancelled = false
     let loadedTex = null
-    const loader = new THREE.TextureLoader()
+    setTexture(null)
+    const loader = new THREE.ImageLoader()
     loader.load(
       url,
-      (tex) => {
-        if (cancelled) {
-          tex.dispose()
-          return
-        }
-        tex.colorSpace = THREE.SRGBColorSpace
-        loadedTex = tex
-        setTexture(tex)
-        const img = tex.image
+      (img) => {
+        if (cancelled) return
+        loadedTex = createBlurredThumbnail(img, width)
+        setTexture(loadedTex)
         const iw = img.naturalWidth || img.width
         const ih = img.naturalHeight || img.height
         setHeight(iw ? (ih / iw) * width : width)
@@ -1062,7 +1086,7 @@ export default function CoordinateScene({ points, originId, thumbnailWidth, onZo
         {relative.map((p, i) => (
           <ThumbnailBillboard
             key={p.id}
-            url={`/coordinate-thumbnail/${p.id}.png?v=${COORDINATE_THUMBNAIL_VERSION}`}
+            url={getVideoThumbnailUrl(p.playbackId, 600)}
             position={p.position}
             width={thumbnailWidth}
             delay={i * STAGGER_STEP}

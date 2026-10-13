@@ -87,12 +87,15 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
   transition-duration: 0.45s;
 }
 
-/* Poster drives the card's intrinsic size; video overlays on top. */
+/* Extend the blur beyond the clipped frame so its edges stay filled. */
 .video-card__poster {
-  position: relative;
+  position: absolute;
+  inset: -24px;
   z-index: 1;
-  width: 100%;
-  height: auto;
+  width: calc(100% + 48px);
+  height: calc(100% + 48px);
+  object-fit: cover;
+  filter: blur(8px);
   display: block;
   transition: opacity 0.4s cubic-bezier(0.5, 0, 0, 1);
 }
@@ -118,14 +121,6 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
 .video-card--video-ready video,
 .video-card--video-ready mux-video {
   opacity: 1;
-}
-
-.video-card--video-sized .video-card__poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .video-card__info {
