@@ -87,6 +87,21 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
   transition-duration: 0.45s;
 }
 
+/* Clip the blurred poster in its own rounded layer from the first paint.
+   Inherit the card's radius so focus animations keep the same corners. */
+.video-card__poster-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#fff, #fff);
+  mask-image: linear-gradient(#fff, #fff);
+  transition: opacity 0.4s cubic-bezier(0.5, 0, 0, 1);
+}
+
 /* Extend the blur beyond the clipped frame so its edges stay filled. */
 .video-card__poster {
   position: absolute;
@@ -97,10 +112,9 @@ body.is-mobile-focus .video-card--mobile-focus-prev::after {
   object-fit: cover;
   filter: blur(8px);
   display: block;
-  transition: opacity 0.4s cubic-bezier(0.5, 0, 0, 1);
 }
 
-.video-card--video-ready .video-card__poster {
+.video-card--video-ready .video-card__poster-frame {
   opacity: 0;
 }
 

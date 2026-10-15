@@ -698,13 +698,15 @@ export default function VideoCard({
         onPointerCancel={handlePointerEnd}
         style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}
       >
-        <img
-          className="video-card__poster"
-          src={getVideoThumbnailUrl(playbackId)}
-          alt=""
-          onLoad={handlePosterLoad}
-          onError={handlePosterLoad}
-        />
+        <div className="video-card__poster-frame">
+          <img
+            className="video-card__poster"
+            src={getVideoThumbnailUrl(playbackId)}
+            alt=""
+            onLoad={handlePosterLoad}
+            onError={handlePosterLoad}
+          />
+        </div>
         <mux-video
           ref={videoRef}
           playback-id={playbackId}
