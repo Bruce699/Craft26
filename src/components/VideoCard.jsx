@@ -455,7 +455,7 @@ export default function VideoCard({
             transform: 'translate(0px, 0px) scale(1)',
             borderRadius: '12px',
             transition:
-              'transform 0.45s cubic-bezier(0.5, 0, 0, 1), border-radius 0.45s cubic-bezier(0.5, 0, 0, 1)',
+              'transform 0.45s cubic-bezier(0.5, 0, 0, 1), border-radius 0.45s cubic-bezier(0.5, 0, 0, 1), clip-path 0.45s cubic-bezier(0.5, 0, 0, 1)',
             zIndex: 100,
           }
         }
@@ -465,7 +465,7 @@ export default function VideoCard({
           // Divide by scale so the visual corner stays ~12px when scaled.
           borderRadius: `${12 / scale}px`,
           transition:
-            'transform 0.5s cubic-bezier(0.5, 0, 0, 1), border-radius 0.5s cubic-bezier(0.5, 0, 0, 1)',
+            'transform 0.5s cubic-bezier(0.5, 0, 0, 1), border-radius 0.5s cubic-bezier(0.5, 0, 0, 1), clip-path 0.5s cubic-bezier(0.5, 0, 0, 1)',
           zIndex: 100,
         }
       }
@@ -477,7 +477,7 @@ export default function VideoCard({
       if (!focusRect) return null
       const { dx, dy, scale } = getMobileFocusTransform(focusRect)
       const commonTransition =
-        `transform ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1), border-radius ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1)`
+        `transform ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1), border-radius ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1), clip-path ${MOBILE_FOCUS_TRANSITION_MS}ms cubic-bezier(0.5, 0, 0, 1)`
       const dragTransition = mobileDrag.dragging ? 'none' : commonTransition
       const activeScale = isMobileFocused
         ? 1 + (scale - 1) * (1 - mobileDrag.progress)
@@ -678,6 +678,11 @@ export default function VideoCard({
     // Keep a usable frame while the poster loads, or if it fails.
     aspectRatio: String(videoAspectRatio ?? posterAspectRatio ?? 16 / 9),
     ...(transitionStyle ?? {}),
+    // Keep the compositor clip aligned with the radius while a card is focused.
+    ...(transitionStyle?.borderRadius ? {
+      WebkitClipPath: `inset(0 round ${transitionStyle.borderRadius})`,
+      clipPath: `inset(0 round ${transitionStyle.borderRadius})`,
+    } : {}),
   }
 
   return (

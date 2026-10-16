@@ -2,6 +2,10 @@
   position: relative;
   border-radius: var(--dp-card-radius, 12px);
   overflow: hidden;
+  /* Clip the poster and Mux's composited video together, including on mobile. */
+  -webkit-clip-path: inset(0 round var(--dp-card-radius, 12px));
+  clip-path: inset(0 round var(--dp-card-radius, 12px));
+  isolation: isolate;
   background: #000;
   cursor: pointer;
   /* Prevent flex/block from adding extra space below the video */
