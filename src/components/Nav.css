@@ -57,7 +57,6 @@ body.is-desktop-focus-exiting .nav-pill {
 .nav-pill__link {
   color: var(--dp-nav-link-color, #404040);
   text-decoration: none;
-  font-weight: 250;
 }
 
 .nav-pill__current,
@@ -67,6 +66,9 @@ body.is-desktop-focus-exiting .nav-pill {
 .nav-pill__current:active {
   color: var(--dp-nav-active-color, #d8d8d8);
   text-decoration: none;
+  /* Static Lausanne has no GRAD axis. Simulate grade without changing glyph
+     advances, so tab spacing and the pill width stay fixed when switching. */
+  -webkit-text-stroke: 0.015em currentColor;
 }
 
 .nav-pill > :nth-child(1) {
