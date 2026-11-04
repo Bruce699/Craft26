@@ -3,5 +3,9 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/internet-design", "destination": "/index.html" },
+    { "source": "/internet-design/v2", "destination": "/index.html" }
+  ]
 }
