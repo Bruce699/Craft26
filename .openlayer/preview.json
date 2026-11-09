@@ -1,0 +1,5 @@
+{
+  "setup": "npm install --no-audit --no-fund --prefer-offline --loglevel=error",
+  "run": "npm run dev -- --host 0.0.0.0 --port $PORT --strictPort",
+  "reload": "native"
+}
