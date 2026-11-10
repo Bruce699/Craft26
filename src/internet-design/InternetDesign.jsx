@@ -73,6 +73,8 @@ const spearControls = withControlDefaults(controls, {
   lighting: rockVersions[2].lighting,
   screenLight: rockVersions[2].screenLight,
 })
+spearControls.opening = { size: [100, 50, 120, 1], horizontal: [0, -10, 10, 0.1], vertical: [0, -14, 18, 0.1] }
+delete spearControls.videoWindow
 spearControls.shape.presets = { spear: { type: 'action', label: 'Stone spear' }, ...spearControls.shape.presets }
 spearControls.finish.flakeScale = [1, 0.35, 2.5, 0.05]
 spearControls.finish.detail = [1, 0, 2, 0.05]
@@ -101,7 +103,7 @@ function Icon({ name }) {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-export default function InternetDesign({ version = 1, dialOpen = false }) {
+export default function InternetDesign({ version = 1, dialOpen = false, sceneOverrides }) {
   const profile = rockVersions[version] ?? rockVersions[1]
   const playerRef = useRef(null)
   const sculptApiRef = useRef(null)
@@ -153,20 +155,21 @@ export default function InternetDesign({ version = 1, dialOpen = false }) {
   // Width, height, and aspect are three views of the same dimensions. Changing
   // aspect preserves area when possible; editing either dimension updates ratio.
   useLayoutEffect(() => {
+    if (version === 2) return
     const current = params.videoWindow
     const next = syncVideoWindow(current, previousWindow.current)
     previousWindow.current = next
     if (['width', 'height', 'aspectRatio'].some((key) => Math.abs(current[key] - next[key]) > 1e-8)) {
       dial.setValues({ videoWindow: next })
     }
-  }, [params.videoWindow.width, params.videoWindow.height, params.videoWindow.aspectRatio, dial.setValues])
+  }, [version, params.videoWindow?.width, params.videoWindow?.height, params.videoWindow?.aspectRatio, dial.setValues])
 
   useEffect(() => {
     // DialKit re-registers retained panels in StrictMode and snaps slider values.
     // Restore the linked dimensions after registration so the square is exact.
     previousWindow.current = videoWindowDefaults
-    dial.setValues({ videoWindow: videoWindowDefaults, rock: { expanded: false } })
-  }, [dial.setValues])
+    dial.setValues(version === 2 ? { rock: { expanded: false } } : { videoWindow: videoWindowDefaults, rock: { expanded: false } })
+  }, [dial.setValues, version])
 
   function changeClip(direction) {
     const current = Number(dial.getValues().playback.clip)
@@ -262,6 +265,12 @@ export default function InternetDesign({ version = 1, dialOpen = false }) {
   const toggleExpanded = useCallback(() => {
     dial.setValue('rock.expanded', !dial.getValues().rock.expanded)
   }, [dial.setValue, dial.getValues])
+  const opening = sceneOverrides?.opening ?? params.opening
+  const videoWindow = version === 2 ? {
+    width: videoWindowDefaults.width * opening.size / 100,
+    height: videoWindowDefaults.height * opening.size / 100,
+    offsetX: opening.horizontal, offsetY: opening.vertical,
+  } : params.videoWindow
   const showFallback = useCallback(() => setFallback(true), [])
 
   return (
@@ -291,11 +300,11 @@ export default function InternetDesign({ version = 1, dialOpen = false }) {
               <RockScene
                 version={version}
                 video={video}
-                settings={{ ...params.rock, ...params.finish }}
+                settings={{ ...params.rock, ...params.finish, ...sceneOverrides?.stone }}
                 shape={flattenShape(params.shape)}
-                videoWindow={params.videoWindow}
+                videoWindow={videoWindow}
                 backdrop={params.backdrop}
-                lighting={params.lighting}
+                lighting={{ ...params.lighting, ...sceneOverrides?.lighting }}
                 screenLight={params.screenLight}
                 sculpt={params.sculpt}
                 sculptApiRef={sculptApiRef}

@@ -16,6 +16,7 @@ export default function ScreenLightBeams({ frame, sourceUniforms, settings, redu
 
   useFrame((state) => {
     if (!meshRef.current) return
+    meshRef.current.position.copy(frame.center)
     const uniforms = material.uniforms
     // worldToLocal updates parent matrices after the rock's tilt/approach step.
     state.camera.getWorldPosition(uniforms.beamCamera.value)

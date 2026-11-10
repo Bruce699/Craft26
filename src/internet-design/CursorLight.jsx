@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export default function CursorLight({ settings, positionRef, cursorRef, reducedMotion }) {
+export default function CursorLight({ settings, positionRef, cursorRef, wideLightMix, reducedMotion }) {
   const lightRef = useRef(null)
   const pointer = useRef(new THREE.Vector2())
   const target = useRef(new THREE.Vector3())
@@ -20,9 +20,11 @@ export default function CursorLight({ settings, positionRef, cursorRef, reducedM
     }
     const reset = () => pointer.current.set(0, 0)
     window.addEventListener('pointermove', move, { passive: true })
+    canvas.addEventListener('pointerleave', reset)
     window.addEventListener('blur', reset)
     return () => {
       window.removeEventListener('pointermove', move)
+      canvas.removeEventListener('pointerleave', reset)
       window.removeEventListener('blur', reset)
     }
   }, [canvas])
@@ -41,8 +43,30 @@ export default function CursorLight({ settings, positionRef, cursorRef, reducedM
       parameters.current.z,
     )
     positionRef.current.copy(target.current)
-    cursorRef.current.copy(follow ? pointer.current : center.current)
-    lightRef.current?.position.copy(positionRef.current)
+    const wallFollow = settings.wallFollowsCursor ?? follow
+    cursorRef.current.copy(wallFollow ? pointer.current : center.current)
+    if (!wallFollow) positionRef.current.set(0, parameters.current.y, parameters.current.z)
+    // Preserve the authored wall beam and close-up light. In the wide shot
+    // rake the blade from camera-right so the knapped ridge casts tonal relief.
+    if (lightRef.current) {
+      const wide = wideLightMix.current
+      lightRef.current.position.copy(target.current)
+      if (wide > 0) {
+        // Move the key across the face in the wide shot too. A raised
+        // light keeps the ridge readable even when the cursor crosses center.
+        const x = follow ? Math.tanh(pointer.current.x * 3.3) : 0
+        const y = follow ? pointer.current.y : 0
+        const travel = THREE.MathUtils.clamp(parameters.current.x / 180, 0, 1)
+        const angle = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(
+          (settings.wideAngle ?? 64) + x * (x < 0 ? 120 : 42) * travel, -80, 86))
+        const range = parameters.current.z
+        const pos = lightRef.current.position
+        pos.x = THREE.MathUtils.lerp(pos.x, range * Math.sin(angle), wide)
+        pos.y = THREE.MathUtils.lerp(pos.y, parameters.current.y + y * range * 0.68 * travel, wide)
+        pos.z = THREE.MathUtils.lerp(pos.z, range * Math.cos(angle) * 0.68, wide)
+      }
+      lightRef.current.intensity = settings.intensity * THREE.MathUtils.lerp(1, 0.6 * (settings.wideBrightness ?? 1), wide)
+    }
   }, -0.5)
 
   // Shared source for the stone and lettering. The wall material localizes its

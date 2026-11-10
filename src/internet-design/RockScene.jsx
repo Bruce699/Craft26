@@ -4,6 +4,7 @@ import { Environment, PerspectiveCamera, useGLTF, useTexture } from '@react-thre
 import * as THREE from 'three'
 import { createScreenGlowMaterial } from './screenGlowMaterial'
 import { createRockDeformer } from './rockGeometry'
+import { createSpearOpening } from './spearOpening'
 import { createSpearGeometry } from './spearGeometry'
 import { createVideoWindowDeformer } from './videoWindowGeometry'
 import { videoWindowDefaults } from './videoWindowControls'
@@ -137,6 +138,7 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
   const brushCursorRef = useRef(null)
   const readyRef = useRef(false)
   const [approach] = useState(() => createRockApproach(settings.expanded))
+  const wideLightMix = useRef(version === 2 && !settings.expanded ? 1 : 0)
   const approachTimeRef = useRef(0)
   const lightPositionRef = useRef(new THREE.Vector3(0, lighting.height, lighting.distance))
   const lightCursorRef = useRef(new THREE.Vector2())
@@ -168,7 +170,7 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
     const source = version === 2 ? createSpearGeometry(geometries.stone, geometries.screen) : geometries.stone
     const base = createRockDeformer(source, geometries.screen)
     if (version === 2) source.dispose()
-    return createVideoWindowDeformer(base, geometries.screen)
+    return version === 2 ? createSpearOpening(base) : createVideoWindowDeformer(base, geometries.screen)
   }, [geometries, version])
   const brushGeometry = useMemo(() => new THREE.RingGeometry(0.975, 1, 64), [])
   const sculpting = useRockSculpt({
@@ -185,6 +187,7 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
   useFrame(() => {
     const { width, height } = deformer.window
     const uniforms = stoneSurface.uniforms
+    uniforms.screenGlowCenter.value.copy(deformer.frame.center)
     uniforms.screenGlowVideo.value = videoTexture
     if (videoTexture) uniforms.screenGlowVideoMatrix.value.copy(videoTexture.matrix)
     uniforms.screenGlowHalfSize.value.set(deformer.frame.halfWidth * width, deformer.frame.halfHeight * height)
@@ -311,7 +314,9 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
       camera.zoom = 1
       camera.updateProjectionMatrix()
     }
-    group.position.z = approachZ(camera.position.z, approach.sample(approachTimeRef.current))
+    const magnification = approach.sample(approachTimeRef.current)
+    wideLightMix.current = version === 2 ? 2 - magnification : 0
+    group.position.z = approachZ(camera.position.z, magnification)
   }, -1)
 
   const expand = (event) => {
@@ -331,7 +336,7 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
         far={2000}
         position={[0, 0, initialDistance.current]}
       />
-      <CursorLight settings={lighting} positionRef={lightPositionRef} cursorRef={lightCursorRef} reducedMotion={reducedMotion} />
+      <CursorLight wideLightMix={wideLightMix} settings={lighting} positionRef={lightPositionRef} cursorRef={lightCursorRef} reducedMotion={reducedMotion} />
       <CarvedBackdrop settings={backdrop} lighting={lighting} lightPositionRef={lightPositionRef} lightCursorRef={lightCursorRef} />
       <group ref={motionRef} scale={initialScale.current} position={initialPosition.current}>
         <group rotation={[0, Math.PI, 0]} dispose={null}>

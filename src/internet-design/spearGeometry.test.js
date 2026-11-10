@@ -8,7 +8,7 @@ import test from 'node:test'
 import * as THREE from 'three'
 import { createRockDeformer } from './rockGeometry.js'
 import { createSpearGeometry } from './spearGeometry.js'
-import { createVideoWindowDeformer } from './videoWindowGeometry.js'
+import { createSpearOpening } from './spearOpening.js'
 
 // Decode the actual checked-in reference mesh using Three's bundled decoder.
 const decoderURL = new URL('../examples/jsm/libs/draco/gltf/draco_decoder.js', import.meta.resolve('three'))
@@ -80,20 +80,41 @@ test('spear source is private, deterministic and leaves the original UV/index as
   a.dispose(); b.dispose()
 })
 
-test('the entire original recess and safety collar retain exact positions and normals', () => {
-  const spear = createSpearGeometry(stone, screen)
-  let pinned = 0, changed = 0
-  for (let k = 0; k < original.length; k += 3) {
-    if (reference.protectionAt(original.subarray(k, k + 3)) === 1) {
-      pinned++
-      assert.deepEqual(spear.attributes.position.array.subarray(k, k + 3), original.subarray(k, k + 3))
-      assert.deepEqual(spear.attributes.normal.array.subarray(k, k + 3), originalNormals.subarray(k, k + 3))
-    } else if (Math.hypot(spear.attributes.position.array[k] - original[k], spear.attributes.position.array[k + 1] - original[k + 1], spear.attributes.position.array[k + 2] - original[k + 2]) > 0.01) changed++
+test('moving and resizing the square removes stock only inside its footprint and leaves a solid back', () => {
+  const solid = createSpearGeometry(stone, screen)
+  const opening = createSpearOpening(createRockDeformer(solid, screen))
+  const frame = { ...opening.frame, center: reference.frame.center }
+  const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })
+  const distances = (geometry, u, v) => {
+    const origin = frame.center.clone().addScaledVector(frame.u, u).addScaledVector(frame.v, v).addScaledVector(frame.normal, 100)
+    const hits = new THREE.Raycaster(origin, frame.normal.clone().negate()).intersectObject(new THREE.Mesh(geometry, material))
+    return hits.map(hit => 100 - hit.distance)
   }
-  assert.ok(pinned > 1000)
-  assert.ok(changed > stone.attributes.position.count * 0.4)
-  assert.equal(pinned, spear.userData.spear.protectedVertices)
-  spear.dispose()
+  const originalFront = distances(solid, 0, 0)[0]
+  let previousX, previousY
+  for (const [size, x, y] of [[1, 0, 0], [0.5, -8, -9], [1.2, 10, 18], [1.2, -10, -14]]) {
+    opening.setWindow({width:size*Math.sqrt(frame.halfHeight/frame.halfWidth), height:size*Math.sqrt(frame.halfWidth/frame.halfHeight), offsetX:x, offsetY:y})
+    const relative = opening.frame.center.clone().sub(frame.center)
+    const cx = relative.dot(frame.u), cy = relative.dot(frame.v), bottom = relative.dot(frame.normal)
+    const half = opening.window.width * frame.halfWidth
+    assert.ok(Math.abs(half-opening.window.height*frame.halfHeight)<1e-7)
+    if(x) { assert.ok(cx*x>0 && cy*y>0); assert.notEqual(previousX,cx); assert.notEqual(previousY,cy) }
+    previousX=cx; previousY=cy
+    for(const u of [-0.98,0,0.98]) for(const v of [-0.98,0,0.98]) {
+      const a=cx+u*half, b=cy+v*half
+      const stock=distances(solid,a,b), cut=distances(opening.geometry,a,b)
+      assert.ok(stock[0]>bottom && cut.length>0 && cut[0]<bottom)
+      assert.ok(Math.abs(stock.at(-1)-cut.at(-1))<1e-5)
+    }
+    // Check the old player location as well as points around the new edges.
+    for(const [a,b] of [[0,0],[cx-half-0.2,cy],[cx+half+0.2,cy],[cx,cy-half-0.2],[cx,cy+half+0.2]]) {
+      if(Math.abs(a-cx)<=half && Math.abs(b-cy)<=half) continue
+      assert.ok(Math.abs(distances(solid,a,b)[0]-distances(opening.geometry,a,b)[0])<1e-4, JSON.stringify({a,b,cx,cy,half,old:distances(solid,a,b),cut:distances(opening.geometry,a,b),dot:frame.u.dot(frame.normal)}))
+    }
+    assert.deepEqual(opening.geometry.boundingBox, solid.boundingBox)
+    assert.equal(distances(solid,0,0)[0],originalFront)
+  }
+  opening.dispose(); solid.dispose(); material.dispose()
 })
 
 test('silhouette is a tall pointed spear with a broad lower blade', () => {
@@ -105,10 +126,21 @@ test('silhouette is a tall pointed spear with a broad lower blade', () => {
   const lowerWidth = Math.max(...points.filter((p) => p[1] < -12).map((p) => Math.abs(p[0]))) * 2
   console.log(`spear aperture-frame extents U[${minU.toFixed(2)},${maxU.toFixed(2)}] V[${minV.toFixed(2)},${maxV.toFixed(2)}]; ${width.toFixed(2)}×${height.toFixed(2)} (${(height / width).toFixed(2)}:1), tip width ${tipWidth.toFixed(2)}`)
   assert.ok(maxV > 54.9 && minV < -28.9)
-  assert.ok(height / width > 1.7 && height / width < 2.05)
-  assert.ok(width > 42 && width < 50)
-  assert.ok(tipWidth < 5)
+  assert.ok(height / width > 1.49 && height / width < 1.68)
+  assert.ok(width > 50 && width < 56)
+  assert.ok(tipWidth < 7)
   assert.ok(lowerWidth > 40)
+  // A cinch must retreat on BOTH sides, then flare out again toward the heel.
+  function edgesAt(y) {
+    const row = points.filter(p => Math.abs(p[1] - y) < 0.72).map(p => p[0])
+    assert.ok(row.length > 0)
+    return [-Math.min(...row), Math.max(...row)]
+  }
+  const shoulders = edgesAt(-9), notches = edgesAt(-13.4), heel = edgesAt(-19)
+  for (let side = 0; side < 2; side++) {
+    assert.ok(shoulders[side] - notches[side] > 3)
+    assert.ok(heel[side] - notches[side] > 2)
+  }
   spear.dispose()
 })
 
@@ -146,13 +178,13 @@ test('spear remains an editable neutral source with a centered square player', (
   const edit = createRockDeformer(spear, screen)
   edit.apply()
   assert.deepEqual(edit.geometry.attributes.position.array, source)
-  const wrapper = createVideoWindowDeformer(edit, screen)
-  wrapper.setWindow({ width: Math.sqrt(1 / wrapper.baseAspect), height: Math.sqrt(wrapper.baseAspect) })
+  const wrapper = createSpearOpening(edit)
+  wrapper.setWindow({ width: Math.sqrt(frame.halfHeight / frame.halfWidth), height: Math.sqrt(frame.halfWidth / frame.halfHeight) })
   assert.ok(Math.abs(wrapper.aspect - 1) < 1e-10)
   const screenPoints = projected(wrapper.screenGeometry)
   const width = Math.max(...screenPoints.map((p) => p[0])) - Math.min(...screenPoints.map((p) => p[0]))
   const height = Math.max(...screenPoints.map((p) => p[1])) - Math.min(...screenPoints.map((p) => p[1]))
   assert.ok(Math.abs(width / height - 1) < 0.002)
-  assert.deepEqual(wrapper.screenGeometry.attributes.uv.array, screen.attributes.uv.array)
+  assert.equal(wrapper.screenGeometry.index.count, 6)
   wrapper.dispose(); spear.dispose()
 })

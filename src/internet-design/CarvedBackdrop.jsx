@@ -7,6 +7,20 @@ import { createWallSurface } from './wallMaterial'
 // Original vector from Figma node 15:494. Geometry, letterforms, and positions
 // come from this asset; only its baked shading is replaced by live scene light.
 const DESIGN_URL = '/internet-design/figma/new-stone-age.svg'
+let wallMaps
+function loadWallMaps() {
+  // Lossless copies of the SVG relief generator's bottom-up RGBA buffers.
+  // Decode once rather than rebuilding both 2048px maps on the UI thread.
+  const loader = new THREE.TextureLoader()
+  wallMaps ??= Promise.all(['clean', 'worn'].map(async (variant) => {
+    const texture = await loader.loadAsync(`/internet-design/figma/relief-${variant}.png`)
+    texture.flipY = false
+    return texture
+  })).then(([normalMap, wornNormalMap]) => ({ normalMap, wornNormalMap, aspect: 1931 / 684 }))
+    .catch(() => loadBackdropRelief(DESIGN_URL))
+  return wallMaps
+}
+
 const ignoreRaycast = () => null
 
 export default function CarvedBackdrop({ settings, lighting, lightPositionRef, lightCursorRef }) {
@@ -19,7 +33,7 @@ export default function CarvedBackdrop({ settings, lighting, lightPositionRef, l
 
   useEffect(() => {
     let active = true
-    loadBackdropRelief(DESIGN_URL).then((result) => {
+    loadWallMaps().then((result) => {
       if (active) setMaps(result)
     }).catch((error) => console.error('Unable to load the Figma relief:', error))
     return () => { active = false }
@@ -71,9 +85,10 @@ export default function CarvedBackdrop({ settings, lighting, lightPositionRef, l
 
   return (
     <group ref={rootRef} visible={settings.enabled} userData={{ figmaNode: '15:494', sourceAsset: DESIGN_URL }}>
-      <mesh ref={planeRef} raycast={ignoreRaycast}>
+      <mesh renderOrder={1000} ref={planeRef} raycast={ignoreRaycast}>
         <planeGeometry args={[1, 1]} />
         <meshStandardMaterial
+          depthWrite={false}
           ref={materialRef}
           color={settings.color}
           emissive={settings.color}

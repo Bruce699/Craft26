@@ -1,10 +1,26 @@
 import * as THREE from 'three'
-import { createRockDeformer } from './rockGeometry.js'
+import { apertureFrame } from './rockGeometry.js'
 
 const TIP = 55
 const BASE = -29
-const SHOULDER = -20
-const HALF_SHOULDER = 23.5
+// Side profiles measured from the cropped flint reference (Figma 15:436).
+// Height runs from point to heel; separate edges keep the notches asymmetric.
+const SHOULDER = -10
+const profile = [
+  [0, .08, .08], [.045, 1.7, 2.2], [.15, 5.6, 4.5],
+  [.30, 11.8, 9.1], [.50, 19, 15.8], [.67, 25.3, 21.8],
+  [.76, 28.9, 25.5], [.784, 28.4, 25.4], [.793, 24.4, 22],
+  [.805, 19.4, 17.8], [.822, 19.9, 18.4], [.839, 24.5, 21.3],
+  [.873, 25.4, 24], [.91, 24.3, 23.6], [.95, 19.6, 19.8],
+  [.984, 12.8, 12.9], [1, 4.4, 4.8],
+]
+function edgeWidth(y, side) {
+  const t = clamp((TIP - y) / (TIP - BASE), 0, 1)
+  const end = profile.findIndex(row => row[0] >= t)
+  if (end <= 0) return profile[0][side]
+  const a = profile[end - 1], b = profile[end]
+  return THREE.MathUtils.lerp(a[side], b[side], (t-a[0])/(b[0]-a[0]))
+}
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 const smooth = (value) => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t) }
 const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
@@ -36,17 +52,16 @@ function horizontalRange(hull, y) {
   return [low, high]
 }
 
-/** A private knapped spear source, with the exact original player and recess.
+/** A private knapped spear source, before the player opening is cut.
  * Vertex/index/UV topology stays compatible with the existing editable deformer.
  */
 export function createSpearGeometry(stoneGeometry, screenGeometry) {
-  const guide = createRockDeformer(stoneGeometry, screenGeometry)
-  const geometry = guide.geometry
+  const frame = apertureFrame(screenGeometry)
+  const geometry = stoneGeometry.clone()
   const position = geometry.attributes.position
   const source = new Float32Array(position.array)
-  const sourceNormals = new Float32Array(geometry.attributes.normal.array)
-  const { center, u, v, normal, halfWidth, halfHeight, collar, falloff } = guide.frame
-  const count = position.count, points = [], local = new Float64Array(count * 3), protectedVertices = new Uint8Array(count)
+  const { center, u, v, normal, halfWidth, halfHeight, collar, falloff } = frame
+  const count = position.count, points = [], local = new Float64Array(count * 3)
   let minV = Infinity, maxV = -Infinity, minN = Infinity, maxN = -Infinity
   for (let i = 0; i < count; i++) {
     const k = i * 3, x = source[k] - center.x, y = source[k + 1] - center.y, z = source[k + 2] - center.z
@@ -54,28 +69,24 @@ export function createSpearGeometry(stoneGeometry, screenGeometry) {
     local[k] = a; local[k + 1] = b; local[k + 2] = d
     points.push({ x: a, y: b })
     minV = Math.min(minV, b); maxV = Math.max(maxV, b); minN = Math.min(minN, d); maxN = Math.max(maxN, d)
-    protectedVertices[i] = guide.protectionAt([source[k], source[k + 1], source[k + 2]]) === 1 ? 1 : 0
+
   }
   const hull = outlineHull(points), pinU = halfWidth + collar, pinV = halfHeight + collar
   const chipCenters = [-21, -11, 0, 11, 23, 36, 46]
   const flakeCenters = [-16, -4, 8, 20, 32, 43]
   for (let i = 0; i < count; i++) {
-    if (protectedVertices[i]) continue
     const k = i * 3, a = local[k], b = local[k + 1], d = local[k + 2]
     let targetV = b
     if (b > pinV) targetV += (TIP - maxV) * smooth((b - pinV) / (maxV - pinV))
     else if (b < -pinV) targetV += (BASE - minV) * smooth((-b - pinV) / (-minV - pinV))
 
     // Keep a broad lower blade and taper both edges into a small real apex.
-    let desiredHalf = targetV >= SHOULDER
-      ? HALF_SHOULDER * clamp((TIP - targetV) / (TIP - SHOULDER), 0, 1)
-      : THREE.MathUtils.lerp(16, HALF_SHOULDER, clamp((targetV - BASE) / (SHOULDER - BASE), 0, 1))
-    desiredHalf = Math.max(0.16, desiredHalf)
     const pinAmount = 1 - smooth((Math.abs(b) - pinV) / (falloff * 3))
     const hinge = pinU * pinAmount
     const [left, right] = horizontalRange(hull, b)
     const shift = (left + right) * 0.5 * (1 - pinAmount)
     const relativeU = a - shift, side = relativeU < 0 ? -1 : 1
+    let desiredHalf = edgeWidth(targetV, side < 0 ? 1 : 2)
     let chips = 0
     for (let j = 0; j < chipCenters.length; j++) {
       const staggeredCenter = chipCenters[j] + (side > 0 ? 1.4 : -0.8)
@@ -91,8 +102,17 @@ export function createSpearGeometry(stoneGeometry, screenGeometry) {
     // scars. Their planar ramps create knapped facets instead of tiny noise.
     const bladeCoordinate = clamp(Math.abs(targetU) / Math.max(desiredHalf, 0.16), 0, 1)
     const tipThin = clamp((TIP - targetV) / 18, 0.12, 1)
-    const thickness = (0.35 + 5.7 * (1 - bladeCoordinate)) * tipThin
-    const depthFraction = clamp((d - minN) / (maxN - minN), 0, 1)
+    // Carry the tying notches inward as shallow oblique grooves on the faces.
+    const grooveHeight = BASE + 16.3 + 3.5 * bladeCoordinate + (side > 0 ? 0.7 : 0)
+    const binding = smooth((bladeCoordinate - 0.42) / 0.45) * Math.exp(-((targetV - grooveHeight) ** 2) / 5)
+    const ridge = smooth((targetV - 9) / 20)
+    const thickness = (0.55 + (9.2 + 1.5 * ridge) * (1 - bladeCoordinate)) * tipThin * (1 - 0.56 * binding)
+    // Restore the uninterrupted blade face through the old GLTF player.
+    // Both the old recess floor and its raised lip land on the same stock
+    // surface. Back vertices still follow the blade's tapered cross section.
+    const stock = 1 - smooth((Math.hypot(a / 15, b / 11) - 1.12) / 0.65)
+    const raw = clamp((d - minN) / (maxN - minN), 0, 1)
+    const depthFraction = THREE.MathUtils.lerp(raw, smooth((d + 11) / 8), stock)
     let targetN = -3 + (depthFraction * 2 - 1) * thickness
     let flakes = 0
     for (let j = 0; j < flakeCenters.length; j++) {
@@ -103,9 +123,7 @@ export function createSpearGeometry(stoneGeometry, screenGeometry) {
     }
     const flakeDepth = Math.min(flakes * 2, thickness * 0.7)
     targetN -= flakeDepth * (depthFraction * 2 - 1)
-    const protection = guide.protectionAt([source[k], source[k + 1], source[k + 2]])
-    const depthBlend = 1 - protection
-    const da = targetU - a, db = targetV - b, dd = (targetN - d) * depthBlend
+    const da = targetU - a, db = targetV - b, dd = targetN - d
     position.array[k] = source[k] + u.x * da + v.x * db + normal.x * dd
     position.array[k + 1] = source[k + 1] + u.y * da + v.y * db + normal.y * dd
     position.array[k + 2] = source[k + 2] + u.z * da + v.z * db + normal.z * dd
@@ -125,13 +143,10 @@ export function createSpearGeometry(stoneGeometry, screenGeometry) {
     const inverseLength = 1 / (Math.hypot(x, y, z) || 1)
     for (const i of group) { const k = i * 3; normals[k] = x * inverseLength; normals[k + 1] = y * inverseLength; normals[k + 2] = z * inverseLength }
   }
-  for (let i = 0; i < count; i++) if (protectedVertices[i]) {
-    const k = i * 3; normals[k] = sourceNormals[k]; normals[k + 1] = sourceNormals[k + 1]; normals[k + 2] = sourceNormals[k + 2]
-  }
   geometry.attributes.position.needsUpdate = true
   geometry.attributes.normal.needsUpdate = true
   geometry.computeBoundingBox(); geometry.computeBoundingSphere()
-  geometry.name = 'Knapped stone spear with protected video recess'
-  geometry.userData.spear = { tip: TIP, base: BASE, shoulder: SHOULDER, protectedVertices: protectedVertices.reduce((sum, value) => sum + value, 0) }
+  geometry.name = 'Solid knapped stone spear'
+  geometry.userData.spear = { tip: TIP, base: BASE, shoulder: SHOULDER }
   return geometry
 }

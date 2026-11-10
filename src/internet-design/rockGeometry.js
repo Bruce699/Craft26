@@ -48,7 +48,7 @@ function noise(x, y, z, seed) {
   return (low + (high - low) * fz) * 2 - 1
 }
 
-function apertureFrame(screenGeometry) {
+export function apertureFrame(screenGeometry) {
   const position = screenGeometry.getAttribute('position')
   const uv = screenGeometry.getAttribute('uv')
   const normals = screenGeometry.getAttribute('normal')
@@ -94,6 +94,17 @@ function apertureFrame(screenGeometry) {
   return { center, u, v, normal, halfWidth, halfHeight, collar: apertureSize * 0.08, falloff: apertureSize * 0.12 }
 }
 
+function apertureDistance({ center, u, v, halfWidth, halfHeight }, x, y, z) {
+  const dx = x - center.x, dy = y - center.y, dz = z - center.z
+  const a = Math.max(0, Math.abs(dx * u.x + dy * u.y + dz * u.z) - halfWidth)
+  const b = Math.max(0, Math.abs(dx * v.x + dy * v.y + dz * v.z) - halfHeight)
+  return Math.hypot(a, b)
+}
+
+export function apertureProtection({ collar, falloff }, distance) {
+  return 1 - smoothstep((distance - collar) / falloff)
+}
+
 /**
  * Deforms a private geometry in original model coordinates. The video anchor and
  * the entire tilted recess column stay fixed. apply() always rebuilds from source;
@@ -117,13 +128,8 @@ export function createRockDeformer(stoneGeometry, screenGeometry) {
   let extentU = 0, extentV = 0, extentN = 0
   let minX = Infinity, minY = Infinity, minZ = Infinity, maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
 
-  const distanceOutsideAperture = (x, y, z) => {
-    const dx = x - center.x, dy = y - center.y, dz = z - center.z
-    const a = Math.max(0, Math.abs(dx * u.x + dy * u.y + dz * u.z) - halfWidth)
-    const b = Math.max(0, Math.abs(dx * v.x + dy * v.y + dz * v.z) - halfHeight)
-    return Math.hypot(a, b)
-  }
-  const protectionXYZ = (x, y, z) => 1 - smoothstep((distanceOutsideAperture(x, y, z) - collar) / falloff)
+  const distanceOutsideAperture = (x, y, z) => apertureDistance(frame, x, y, z)
+  const protectionXYZ = (x, y, z) => apertureProtection(frame, distanceOutsideAperture(x, y, z))
   const protectionAt = (point) => protectionXYZ(point.x ?? point[0], point.y ?? point[1], point.z ?? point[2])
 
   for (let i = 0; i < count; i++) {

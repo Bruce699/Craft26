@@ -71,7 +71,7 @@ export function createWallSurface(maps) {
   return {
     uniforms,
     grainMap,
-    cacheKey: () => 'continuous-carved-wall-v3-local-directional-reveal',
+    cacheKey: () => 'continuous-carved-wall-v4-far-depth',
     onBeforeCompile(shader) {
       Object.assign(shader.uniforms, uniforms)
       shader.vertexShader = shader.vertexShader
@@ -79,6 +79,8 @@ export function createWallSurface(maps) {
         .replace('#include <project_vertex>', `
           vWallWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
           #include <project_vertex>
+          // Shade the wall only where foreground geometry left the depth buffer clear.
+          gl_Position.z = gl_Position.w;
         `)
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', /* glsl */`

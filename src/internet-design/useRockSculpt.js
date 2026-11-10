@@ -16,7 +16,7 @@ export function useRockSculpt({ deformer, shape, videoWindow, sculpt, apiRef, me
   shapeRef.current = shape
   sculptRef.current = sculpt
   const shapeKey = JSON.stringify(shape)
-  const windowKey = `${videoWindow.width},${videoWindow.height}`
+  const windowKey = `${videoWindow.width},${videoWindow.height},${videoWindow.offsetX},${videoWindow.offsetY}`
   const scratch = useMemoScratch()
 
   const notify = useCallback(() => {
@@ -240,9 +240,9 @@ export function useRockSculpt({ deformer, shape, videoWindow, sculpt, apiRef, me
   return {
     revision,
     draggingRef,
-    blockScreen,
+    blockScreen: sculpt.enabled ? blockScreen : undefined,
     canExpand: () => !sculptRef.current.enabled && performance.now() > blockedClickUntil.current,
-    events: { onPointerDown: pointerDown, onPointerMove: pointerMove, onPointerUp: pointerUp, onPointerOut: pointerOut },
+    events: sculpt.enabled ? { onPointerDown: pointerDown, onPointerMove: pointerMove, onPointerUp: pointerUp, onPointerOut: pointerOut } : {},
   }
 }
 
