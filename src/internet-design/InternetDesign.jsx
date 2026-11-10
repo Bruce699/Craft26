@@ -17,7 +17,7 @@ const controls = {
     clip: {
       type: 'select',
       options: playlist.map((clip, index) => ({ value: String(index), label: `${String(index + 1).padStart(2, '0')} · ${clip.name}` })),
-      default: '21',
+      default: '26',
     },
     playing: true,
     muted: true,
@@ -50,26 +50,28 @@ const controls = {
     metalness: [1, 0, 1, 0.01],
     roughness: [0.41, 0, 1, 0.01],
     bump: [0.3, 0, 1, 0.01],
-    screenGlow: [0.38, 0, 1, 0.01],
+    screenGlow: [0.62, 0, 1, 0.01],
     light: [1, 0, 2, 0.01],
   },
   screenLight: {
     _collapsed: true,
     enabled: true,
-    strength: [0.22, 0, 1, 0.01],
-    reach: [32, 8, 80, 1],
+    strength: [0.53, 0, 1, 0.01],
+    reach: [28, 8, 80, 1],
     spread: [0.34, 0.08, 0.8, 0.01],
-    haze: [0.08, 0, 0.35, 0.005],
+    haze: [0.33, 0, 0.35, 0.005],
   },
   canvas: { _collapsed: true, background: '#0F0F0F' },
   reset: { type: 'action', label: 'Reset everything' },
 }
 
 const spearControls = withControlDefaults(controls, {
+  playback: rockVersions[2].playback,
   rock: rockVersions[2].rock,
   shape: rockVersions[2].shape,
   finish: rockVersions[2].finish,
   lighting: rockVersions[2].lighting,
+  screenLight: rockVersions[2].screenLight,
 })
 spearControls.shape.presets = { spear: { type: 'action', label: 'Stone spear' }, ...spearControls.shape.presets }
 spearControls.finish.flakeScale = [1, 0.35, 2.5, 0.05]

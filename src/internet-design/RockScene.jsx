@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
   bump: 0.3,
   color: '#3b3b3b',
   light: 1,
-  screenGlow: 0.38,
+  screenGlow: 0.62,
   expanded: false,
 }
 const DEFAULT_SHAPE = flattenShape(shapeDefaults)

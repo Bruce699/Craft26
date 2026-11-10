@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 export const screenLightDefaults = Object.freeze({
-  enabled: true, strength: 0.22, reach: 32, spread: 0.34, haze: 0.08,
+  enabled: true, strength: 0.53, reach: 28, spread: 0.34, haze: 0.33,
 })
 
 export function createScreenLightMaterial(source) {
@@ -13,10 +13,10 @@ export function createScreenLightMaterial(source) {
       screenGlowReady: source.screenGlowReady,
       beamCamera: { value: new THREE.Vector3() },
       beamStart: { value: 5 },
-      beamReach: { value: 32 },
-      beamSpread: { value: 0.34 },
-      beamStrength: { value: 0.22 },
-      beamHaze: { value: 0.08 },
+      beamReach: { value: screenLightDefaults.reach },
+      beamSpread: { value: screenLightDefaults.spread },
+      beamStrength: { value: screenLightDefaults.strength },
+      beamHaze: { value: screenLightDefaults.haze },
       beamTime: { value: 0 },
     },
     vertexShader: /* glsl */`

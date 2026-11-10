@@ -64,7 +64,7 @@ reference, even though its RGB image resembles a normal map.
 
 The screen softly illuminates the inward-facing walls of the rock's recess.
 **Rock player → Finish → Screen Glow** controls the amount (0 disables it).
-The starting rim spill is 0.38 in V1 and 0.45 in V2.
+The starting rim spill is 0.62 in V1 and 0.45 in V2.
 Nine samples from the existing live video texture approximate a broad area
 emitter, with local direction, distance, and facing falloff. Colors use the same
 centered cover crop and orientation as the displayed video and are decoded into

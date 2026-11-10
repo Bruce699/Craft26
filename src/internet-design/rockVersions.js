@@ -16,10 +16,12 @@ export const rockVersions = {
     number: 2,
     path: '/internet-design/v2',
     title: 'Internet Design V2 — Stone Spear',
+    playback: { clip: '21' },
     shape: spearShapeDefaults,
     rock: { scale: 1 },
     finish: { color: '#454642', metalness: 0.06, roughness: 0.88, bump: 0.48, light: 1, screenGlow: 0.45 },
     lighting: { intensity: 5, distance: 112, color: '#ffffff', ambient: 0.2 },
+    screenLight: { enabled: true, strength: 0.22, reach: 32, spread: 0.34, haze: 0.08 },
   },
 }
 
@@ -29,6 +31,7 @@ export function withControlDefaults(schema, defaults) {
     const value = defaults[key]
     if (value === undefined) return [key, control]
     if (Array.isArray(control)) return [key, [value, ...control.slice(1)]]
+    if (control?.type === 'select') return [key, { ...control, default: value }]
     if (control && typeof control === 'object' && !control.type) {
       return [key, withControlDefaults(control, value)]
     }
