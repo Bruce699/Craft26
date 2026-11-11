@@ -270,6 +270,7 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
   }, [size.width, size.height, settings.rotationX, settings.rotationY, settings.rotationZ, deformer, sculpting.revision, version])
   const cameraDistance = framing.distance
 
+  const focusOffset = useMemo(() => new THREE.Vector3(), [])
   const initialDistance = useRef(cameraDistance)
   const initialScale = useRef(settings.scale)
   const initialPosition = useRef([framing.x * settings.scale, framing.y * settings.scale, 0])
@@ -304,8 +305,6 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
     )
     group.rotation.z = THREE.MathUtils.lerp(group.rotation.z, settings.rotationZ * RADIANS, blend)
     group.scale.setScalar(THREE.MathUtils.lerp(group.scale.x, settings.scale, blend))
-    group.position.x = THREE.MathUtils.lerp(group.position.x, framing.x * settings.scale, blend)
-    group.position.y = THREE.MathUtils.lerp(group.position.y, framing.y * settings.scale, blend)
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, cameraDistance, blend)
     // Move only the rock toward the fixed camera. The video anchor reaches 2×
     // apparent size in exactly 1200ms using cubic-bezier(.5, 0, 0, 1).
@@ -316,7 +315,23 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
     }
     const magnification = approach.sample(approachTimeRef.current)
     wideLightMix.current = version === 2 ? 2 - magnification : 0
-    group.position.z = approachZ(camera.position.z, magnification)
+    if (version === 2) {
+      // Follow the actual recessed player through its local offset, the scan's
+      // half turn, the authored pose, and scale. Blend from whole-stone framing
+      // to the player's center using the same clock as the approach.
+      focusOffset.copy(deformer.frame.center).sub(deformer.anchor)
+      focusOffset.x *= -1
+      focusOffset.z *= -1
+      focusOffset.applyQuaternion(group.quaternion).multiplyScalar(group.scale.x)
+      const focusMix = magnification - 1
+      group.position.x = THREE.MathUtils.lerp(framing.x * group.scale.x, -focusOffset.x, focusMix)
+      group.position.y = THREE.MathUtils.lerp(framing.y * group.scale.x, -focusOffset.y, focusMix)
+      group.position.z = approachZ(camera.position.z - focusOffset.z, magnification)
+    } else {
+      group.position.x = THREE.MathUtils.lerp(group.position.x, framing.x * settings.scale, blend)
+      group.position.y = THREE.MathUtils.lerp(group.position.y, framing.y * settings.scale, blend)
+      group.position.z = approachZ(camera.position.z, magnification)
+    }
   }, -1)
 
   const expand = (event) => {
