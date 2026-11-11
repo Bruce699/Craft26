@@ -17,7 +17,8 @@ export default function SpearFrame() {
     wideView: {
       lightAngle: [64, 35, 78, 1],
       brightness: [1, 0.45, 1.5, 0.05],
-      pointerTilt: false,
+      pointerTilt: true,
+      turnAmount: [3, 0, 8, 0.25],
     },
     surface: {
       relief: [finish.bump, 0, 1, 0.01],
@@ -32,7 +33,7 @@ export default function SpearFrame() {
   const { playerOpening, stoneAngle, wideView, surface, lettering } = useSyncExternalStore(panel.subscribe, panel.get, panel.get)
   return <InternetDesign version={2} sceneOverrides={{
     opening: { size: playerOpening.sizePercent, horizontal: playerOpening.position.x, vertical: playerOpening.position.y },
-    stone: { rotationX: stoneAngle.tilt, rotationY: stoneAngle.turn, rotationZ: stoneAngle.roll, pointerTilt: wideView.pointerTilt, bump: surface.relief, roughness: surface.roughness, color: surface.stoneColor },
+    stone: { rotationX: stoneAngle.tilt, rotationY: stoneAngle.turn, rotationZ: stoneAngle.roll, pointerTilt: wideView.pointerTilt, tiltAmount: wideView.turnAmount, bump: surface.relief, roughness: surface.roughness, color: surface.stoneColor },
     lighting: { wideAngle: wideView.lightAngle, wideBrightness: wideView.brightness,
       wallFollowsCursor: lettering.followCursor, wallRadius: lettering.revealRadius },
   }} />

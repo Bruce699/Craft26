@@ -68,6 +68,7 @@ export function createSpearOpening(base) {
   const screenTemplate = screenGeometry.attributes.position.clone()
   const frame = { ...f, center: f.center.clone() }
   const world = (x,y,z) => f.center.clone().addScaledVector(f.u,x).addScaledVector(f.v,y).addScaledVector(f.normal,z)
+  const bevel = 0.28
   let index, half, x, y, floor, settings = {}
   function fit() {
     const w = limit(settings.width,0.4,2,1), h = limit(settings.height,0.4,2,1)
@@ -95,7 +96,7 @@ export function createSpearOpening(base) {
     frame.center.copy(world(x,y,floor))
     const sp=screenGeometry.attributes.position
     for(let i=0;i<sp.count;i++) {
-      const point=world(x+screenTemplate.getX(i)*2*half,y+screenTemplate.getY(i)*2*half,floor)
+      const point=world(x+screenTemplate.getX(i)*2*(half-bevel),y+screenTemplate.getY(i)*2*(half-bevel),floor)
       sp.setXYZ(i,point.x,point.y,point.z)
       screenGeometry.attributes.normal.setXYZ(i,f.normal.x,f.normal.y,f.normal.z)
     }
@@ -132,8 +133,18 @@ export function createSpearOpening(base) {
         for(const [axis,v,sign] of planes.slice(0,4)) {
           if(Math.abs(a[axis]-v)>EPS||Math.abs(b[axis]-v)>EPS) continue
           const n=(axis===0?f.u:f.v).clone().multiplyScalar(sign)
-          const vert=(p,d)=>[p[0],p[1],d,n.x,n.y,n.z]
-          fan([vert(a,a[2]),vert(b,b[2]),vert(b,floor),vert(a,floor)])
+          // A narrow worn chamfer recedes into the stock. Its outer edge
+          // shares the blade normal; the inner edge blends into the cut wall.
+          const shoulder = p => {
+            const blended = new THREE.Vector3(p[3],p[4],p[5]).add(n).normalize()
+            return [x+(p[0]-x)*(half-bevel)/half, y+(p[1]-y)*(half-bevel)/half,
+              Math.max(floor,p[2]-0.45), blended.x,blended.y,blended.z]
+          }
+          const innerA=shoulder(a), innerB=shoulder(b)
+          const top=p=>p.slice(0,6)
+          const bottom=p=>[p[0],p[1],floor,n.x,n.y,n.z]
+          fan([top(a),top(b),innerB,innerA])
+          fan([innerA,innerB,bottom(innerB),bottom(innerA)])
         }
       }
     }
@@ -151,7 +162,7 @@ export function createSpearOpening(base) {
   refresh()
   return {
     geometry, screenGeometry, frame, anchor:base.anchor, aspect:1,
-    get window(){return {width:half/f.halfWidth,height:half/f.halfHeight}},
+    get window(){return {width:(half-bevel)/f.halfWidth,height:(half-bevel)/f.halfHeight}},
     setWindow(s){settings=s;refresh()},
     apply(shape,strokes){base.apply(shape,strokes);index=null;refresh()},
     sculpt(stroke){base.sculpt(stroke);index=null;refresh()},

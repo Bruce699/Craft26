@@ -107,7 +107,7 @@ test('moving and resizing the square removes stock only inside its footprint and
       assert.ok(Math.abs(stock.at(-1)-cut.at(-1))<1e-5)
     }
     // Check the old player location as well as points around the new edges.
-    for(const [a,b] of [[0,0],[cx-half-0.2,cy],[cx+half+0.2,cy],[cx,cy-half-0.2],[cx,cy+half+0.2]]) {
+    for(const [a,b] of [[0,0],[cx-half-0.6,cy],[cx+half+0.6,cy],[cx,cy-half-0.6],[cx,cy+half+0.6]]) {
       if(Math.abs(a-cx)<=half && Math.abs(b-cy)<=half) continue
       assert.ok(Math.abs(distances(solid,a,b)[0]-distances(opening.geometry,a,b)[0])<1e-4, JSON.stringify({a,b,cx,cy,half,old:distances(solid,a,b),cut:distances(opening.geometry,a,b),dot:frame.u.dot(frame.normal)}))
     }

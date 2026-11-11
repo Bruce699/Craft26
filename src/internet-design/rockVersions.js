@@ -18,7 +18,7 @@ export const rockVersions = {
     title: 'Internet Design V2 — Stone Spear',
     playback: { clip: '21' },
     shape: spearShapeDefaults,
-    rock: { scale: 1, pointerTilt: false },
+    rock: { scale: 1, pointerTilt: true, tiltAmount: 3 },
     finish: { color: '#454642', metalness: 0.06, roughness: 0.88, bump: 0.48, light: 1, screenGlow: 0.45 },
     lighting: { intensity: 5, distance: 112, color: '#ffffff', ambient: 0.2 },
     screenLight: { enabled: true, strength: 0.22, reach: 32, spread: 0.34, haze: 0.08 },
