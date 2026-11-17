@@ -76,9 +76,8 @@ const spearControls = withControlDefaults(controls, {
 spearControls.opening = { size: [100, 50, 120, 1], horizontal: [0, -10, 10, 0.1], vertical: [0, -14, 18, 0.1] }
 delete spearControls.videoWindow
 spearControls.shape.presets = { spear: { type: 'action', label: 'Stone spear' }, ...spearControls.shape.presets }
-spearControls.finish.flakeScale = [1, 0.35, 2.5, 0.05]
 spearControls.finish.detail = [1, 0, 2, 0.05]
-spearControls.finish.grain = [0.12, 0, 0.5, 0.01]
+spearControls.finish.grain = [0.5, 0, 1, 0.01]
 
 class SceneBoundary extends Component {
   state = { failed: false }

@@ -4,8 +4,8 @@ import { applyRoughStoneBump, createRoughStoneUniforms, roughStoneProgramKey } f
 
 // Approximate a small area emitter using the displayed video itself. There is
 // no video readback, extra light, reflection render target, or geometry pass.
-export function createScreenGlowMaterial(frame, version = 1) {
-  const roughUniforms = version === 2 ? createRoughStoneUniforms() : {}
+export function createScreenGlowMaterial(frame, version = 1, bladeFrame) {
+  const roughUniforms = version === 2 ? createRoughStoneUniforms({}, bladeFrame) : {}
   const uniforms = {
     ...roughUniforms,
     screenGlowVideo: { value: null },

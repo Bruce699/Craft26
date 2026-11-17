@@ -1,150 +1,86 @@
 import * as THREE from 'three'
 import { apertureFrame } from './rockGeometry.js'
+import { TIP, BASE, bladeEdges, flintSurface } from './flintSurface.js'
 
-const TIP = 55
-const BASE = -29
-// Side profiles measured from the cropped flint reference (Figma 15:436).
-// Height runs from point to heel; separate edges keep the notches asymmetric.
+// Height of the barbs, where the blade is widest above the corner notches.
 const SHOULDER = -10
-const profile = [
-  [0, .08, .08], [.045, 1.7, 2.2], [.15, 5.6, 4.5],
-  [.30, 11.8, 9.1], [.50, 19, 15.8], [.67, 25.3, 21.8],
-  [.76, 28.9, 25.5], [.784, 28.4, 25.4], [.793, 24.4, 22],
-  [.805, 19.4, 17.8], [.822, 19.9, 18.4], [.839, 24.5, 21.3],
-  [.873, 25.4, 24], [.91, 24.3, 23.6], [.95, 19.6, 19.8],
-  [.984, 12.8, 12.9], [1, 4.4, 4.8],
-]
-function edgeWidth(y, side) {
-  const t = clamp((TIP - y) / (TIP - BASE), 0, 1)
-  const end = profile.findIndex(row => row[0] >= t)
-  if (end <= 0) return profile[0][side]
-  const a = profile[end - 1], b = profile[end]
-  return THREE.MathUtils.lerp(a[side], b[side], (t-a[0])/(b[0]-a[0]))
-}
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-const smooth = (value) => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t) }
-const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+// The blade's mid-plane sits this far behind the player's original face.
+const MIDPLANE = -3
+// Lattice pitch of both faces, in model units. The mesh only has to carry
+// the outline and the broad facets; finer relief is shaded from the bake.
+const PITCH = 0.7
+// Least half thickness just inside the margin.
+const MARGIN = 0.06
 
-function outlineHull(points) {
-  points.sort((a, b) => a.x - b.x || a.y - b.y)
-  const lower = [], upper = []
-  for (const point of points) {
-    while (lower.length > 1 && cross(lower.at(-2), lower.at(-1), point) <= 0) lower.pop()
-    lower.push(point)
-  }
-  for (let i = points.length - 1; i >= 0; i--) {
-    const point = points[i]
-    while (upper.length > 1 && cross(upper.at(-2), upper.at(-1), point) <= 0) upper.pop()
-    upper.push(point)
-  }
-  return lower.slice(0, -1).concat(upper.slice(0, -1))
+/** Where the blade's own (u, v, height) space sits in model coordinates. */
+export function spearBladeFrame(screenGeometry) {
+  const { center, u, v, normal } = apertureFrame(screenGeometry)
+  return { origin: center.clone().addScaledVector(normal, MIDPLANE), u: u.clone(), v: v.clone(), normal: normal.clone() }
 }
 
-function horizontalRange(hull, y) {
-  let low = Infinity, high = -Infinity
-  for (let i = 0; i < hull.length; i++) {
-    const a = hull[i], b = hull[(i + 1) % hull.length]
-    if (y < Math.min(a.y, b.y) - 1e-7 || y > Math.max(a.y, b.y) + 1e-7) continue
-    if (Math.abs(b.y - a.y) < 1e-8) { low = Math.min(low, a.x, b.x); high = Math.max(high, a.x, b.x); continue }
-    const x = a.x + (b.x - a.x) * (y - a.y) / (b.y - a.y)
-    low = Math.min(low, x); high = Math.max(high, x)
-  }
-  return [low, high]
-}
-
-/** A private knapped spear source, before the player opening is cut.
- * Vertex/index/UV topology stays compatible with the existing editable deformer.
+/**
+ * A solid knapped point, before the player opening is cut. Two faces share one
+ * sharp margin: each is a regular lattice clipped to the traced outline, so the
+ * silhouette and the flake scars are exact rather than warped from a scan.
  */
-export function createSpearGeometry(stoneGeometry, screenGeometry) {
-  const frame = apertureFrame(screenGeometry)
-  const geometry = stoneGeometry.clone()
-  const position = geometry.attributes.position
-  const source = new Float32Array(position.array)
-  const { center, u, v, normal, halfWidth, halfHeight, collar, falloff } = frame
-  const count = position.count, points = [], local = new Float64Array(count * 3)
-  let minV = Infinity, maxV = -Infinity, minN = Infinity, maxN = -Infinity
-  for (let i = 0; i < count; i++) {
-    const k = i * 3, x = source[k] - center.x, y = source[k + 1] - center.y, z = source[k + 2] - center.z
-    const a = x * u.x + y * u.y + z * u.z, b = x * v.x + y * v.y + z * v.z, d = x * normal.x + y * normal.y + z * normal.z
-    local[k] = a; local[k + 1] = b; local[k + 2] = d
-    points.push({ x: a, y: b })
-    minV = Math.min(minV, b); maxV = Math.max(maxV, b); minN = Math.min(minN, d); maxN = Math.max(maxN, d)
-
-  }
-  const hull = outlineHull(points), pinU = halfWidth + collar, pinV = halfHeight + collar
-  const chipCenters = [-21, -11, 0, 11, 23, 36, 46]
-  const flakeCenters = [-16, -4, 8, 20, 32, 43]
-  for (let i = 0; i < count; i++) {
-    const k = i * 3, a = local[k], b = local[k + 1], d = local[k + 2]
-    let targetV = b
-    if (b > pinV) targetV += (TIP - maxV) * smooth((b - pinV) / (maxV - pinV))
-    else if (b < -pinV) targetV += (BASE - minV) * smooth((-b - pinV) / (-minV - pinV))
-
-    // Keep a broad lower blade and taper both edges into a small real apex.
-    const pinAmount = 1 - smooth((Math.abs(b) - pinV) / (falloff * 3))
-    const hinge = pinU * pinAmount
-    const [left, right] = horizontalRange(hull, b)
-    const shift = (left + right) * 0.5 * (1 - pinAmount)
-    const relativeU = a - shift, side = relativeU < 0 ? -1 : 1
-    let desiredHalf = edgeWidth(targetV, side < 0 ? 1 : 2)
-    let chips = 0
-    for (let j = 0; j < chipCenters.length; j++) {
-      const staggeredCenter = chipCenters[j] + (side > 0 ? 1.4 : -0.8)
-      chips += Math.max(0, 1 - Math.abs(targetV - staggeredCenter) / (2.2 + j % 2)) * (0.35 + (j * 7 % 5) * 0.16)
+export function createSpearGeometry(screenGeometry) {
+  const { origin, u, v, normal } = spearBladeFrame(screenGeometry)
+  const surface = flintSurface()
+  const blade = [], rows = []
+  const rowCount = Math.round((TIP - BASE) / PITCH)
+  for (let j = 0; j <= rowCount; j++) {
+    const height = BASE + (TIP - BASE) * j / rowCount
+    const [left, right] = bladeEdges(height)
+    // The tip and the heel each close on a single margin point.
+    if (j === 0 || j === rowCount) {
+      rows.push([blade.length])
+      blade.push([(left + right) / 2, height, 0])
+      continue
     }
-    desiredHalf = Math.max(hinge + (hinge > 0.1 ? 1.8 : 0.16), desiredHalf - chips)
-    const sourceRadius = Math.max(0.05, side < 0 ? shift - left : right - shift)
-    const magnitude = Math.abs(relativeU)
-    const targetU = side * (magnitude <= hinge ? magnitude
-      : hinge + (magnitude - hinge) * (desiredHalf - hinge) / Math.max(0.05, sourceRadius - hinge))
-
-    // Lenticular blade cross section, central ridge, and broad triangular flake
-    // scars. Their planar ramps create knapped facets instead of tiny noise.
-    const bladeCoordinate = clamp(Math.abs(targetU) / Math.max(desiredHalf, 0.16), 0, 1)
-    const tipThin = clamp((TIP - targetV) / 18, 0.12, 1)
-    // Carry the tying notches inward as shallow oblique grooves on the faces.
-    const grooveHeight = BASE + 16.3 + 3.5 * bladeCoordinate + (side > 0 ? 0.7 : 0)
-    const binding = smooth((bladeCoordinate - 0.42) / 0.45) * Math.exp(-((targetV - grooveHeight) ** 2) / 5)
-    const ridge = smooth((targetV - 9) / 20)
-    const thickness = (0.55 + (9.2 + 1.5 * ridge) * (1 - bladeCoordinate)) * tipThin * (1 - 0.56 * binding)
-    // Restore the uninterrupted blade face through the old GLTF player.
-    // Both the old recess floor and its raised lip land on the same stock
-    // surface. Back vertices still follow the blade's tapered cross section.
-    const stock = 1 - smooth((Math.hypot(a / 15, b / 11) - 1.12) / 0.65)
-    const raw = clamp((d - minN) / (maxN - minN), 0, 1)
-    const depthFraction = THREE.MathUtils.lerp(raw, smooth((d + 11) / 8), stock)
-    let targetN = -3 + (depthFraction * 2 - 1) * thickness
-    let flakes = 0
-    for (let j = 0; j < flakeCenters.length; j++) {
-      const flakeSide = j % 2 ? -1 : 1
-      const centerU = flakeSide * desiredHalf * (0.46 + (j % 3) * 0.07)
-      const centerV = flakeCenters[j] + (side > 0 ? 1.2 : 0)
-      flakes += Math.max(0, 1 - Math.abs(targetU - centerU) / Math.max(2.4, desiredHalf * 0.5) - Math.abs(targetV - centerV) / 7.5) * (0.65 + (j % 3) * 0.22)
-    }
-    const flakeDepth = Math.min(flakes * 2, thickness * 0.7)
-    targetN -= flakeDepth * (depthFraction * 2 - 1)
-    const da = targetU - a, db = targetV - b, dd = targetN - d
-    position.array[k] = source[k] + u.x * da + v.x * db + normal.x * dd
-    position.array[k + 1] = source[k + 1] + u.y * da + v.y * db + normal.y * dd
-    position.array[k + 2] = source[k + 2] + u.z * da + v.z * db + normal.z * dd
+    const row = [blade.length]
+    blade.push([left, height, 0])
+    // Interior points stay clear of the margin so no face triangle is a sliver.
+    const inner = (a) => { row.push(blade.length); blade.push([a, height, Math.max(MARGIN, surface.sample(a, height))]) }
+    for (let k = Math.ceil((left + PITCH * 0.35) / PITCH); k * PITCH < right - PITCH * 0.35; k++) inner(k * PITCH)
+    // Even the needle tip keeps one interior point, so the solid stays closed.
+    if (row.length === 1) inner((left + right) / 2)
+    row.push(blade.length)
+    blade.push([right, height, 0])
+    rows.push(row)
   }
-
+  // Margin points belong to both faces; every interior point gets a twin behind.
+  const twin = new Int32Array(blade.length)
+  let count = blade.length
+  for (let i = 0; i < blade.length; i++) twin[i] = blade[i][2] > 0 ? count++ : i
+  const positions = new Float32Array(count * 3), indices = []
+  const place = (index, a, b, d) => {
+    positions[index * 3] = origin.x + u.x * a + v.x * b + normal.x * d
+    positions[index * 3 + 1] = origin.y + u.y * a + v.y * b + normal.y * d
+    positions[index * 3 + 2] = origin.z + u.z * a + v.z * b + normal.z * d
+  }
+  for (let i = 0; i < blade.length; i++) {
+    const [a, b, d] = blade[i]
+    place(i, a, b, d)
+    if (twin[i] !== i) place(twin[i], a, b, -d)
+  }
+  const face = (a, b, c) => {
+    indices.push(a, b, c)
+    if (twin[a] !== a || twin[b] !== b || twin[c] !== c) indices.push(twin[a], twin[c], twin[b])
+  }
+  for (let j = 0; j < rowCount; j++) {
+    const lower = rows[j], upper = rows[j + 1]
+    let i = 0, k = 0
+    while (i < lower.length - 1 || k < upper.length - 1) {
+      const advanceLower = k === upper.length - 1
+        || (i < lower.length - 1 && blade[lower[i + 1]][0] <= blade[upper[k + 1]][0])
+      if (advanceLower) { face(lower[i], lower[i + 1], upper[k]); i++ }
+      else { face(lower[i], upper[k + 1], upper[k]); k++ }
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geometry.setIndex(new THREE.BufferAttribute(count > 65535 ? new Uint32Array(indices) : new Uint16Array(indices), 1))
   geometry.computeVertexNormals()
-  const normals = geometry.attributes.normal.array, groups = new Map()
-  for (let i = 0; i < count; i++) {
-    const k = i * 3, key = `${Math.round(source[k] * 10000)},${Math.round(source[k + 1] * 10000)},${Math.round(source[k + 2] * 10000)}`
-    const group = groups.get(key)
-    if (group) group.push(i)
-    else groups.set(key, [i])
-  }
-  for (const group of groups.values()) if (group.length > 1) {
-    let x = 0, y = 0, z = 0
-    for (const i of group) { const k = i * 3; x += normals[k]; y += normals[k + 1]; z += normals[k + 2] }
-    const inverseLength = 1 / (Math.hypot(x, y, z) || 1)
-    for (const i of group) { const k = i * 3; normals[k] = x * inverseLength; normals[k + 1] = y * inverseLength; normals[k + 2] = z * inverseLength }
-  }
-  geometry.attributes.position.needsUpdate = true
-  geometry.attributes.normal.needsUpdate = true
   geometry.computeBoundingBox(); geometry.computeBoundingSphere()
   geometry.name = 'Solid knapped stone spear'
   geometry.userData.spear = { tip: TIP, base: BASE, shoulder: SHOULDER }

@@ -67,21 +67,20 @@ function projected(geometry) {
   return points
 }
 
-test('spear source is private, deterministic and leaves the original UV/index assets untouched', () => {
-  const a = createSpearGeometry(stone, screen), b = createSpearGeometry(stone, screen)
-  assert.notEqual(a, stone)
-  assert.notEqual(a.attributes.position.array, original)
+test('spear source is its own deterministic mesh and leaves the scanned assets untouched', () => {
+  const a = createSpearGeometry(screen), b = createSpearGeometry(screen)
+  assert.notEqual(a, b)
   assert.deepEqual(a.attributes.position.array, b.attributes.position.array)
   assert.deepEqual(a.attributes.normal.array, b.attributes.normal.array)
-  assert.deepEqual(a.attributes.uv.array, originalUV)
-  assert.deepEqual(a.index.array, stone.index.array)
+  assert.deepEqual(a.index.array, b.index.array)
   assert.deepEqual(stone.attributes.position.array, original)
   assert.deepEqual(stone.attributes.normal.array, originalNormals)
+  assert.deepEqual(stone.attributes.uv.array, originalUV)
   a.dispose(); b.dispose()
 })
 
 test('moving and resizing the square removes stock only inside its footprint and leaves a solid back', () => {
-  const solid = createSpearGeometry(stone, screen)
+  const solid = createSpearGeometry(screen)
   const opening = createSpearOpening(createRockDeformer(solid, screen))
   const frame = { ...opening.frame, center: reference.frame.center }
   const material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })
@@ -117,64 +116,81 @@ test('moving and resizing the square removes stock only inside its footprint and
   opening.dispose(); solid.dispose(); material.dispose()
 })
 
-test('silhouette is a tall pointed spear with a broad lower blade', () => {
-  const spear = createSpearGeometry(stone, screen), points = projected(spear)
+test('silhouette follows the reference point: fine tip, barbs, corner notches and a flared stem', () => {
+  const spear = createSpearGeometry(screen), points = projected(spear)
   const minU = Math.min(...points.map((p) => p[0])), maxU = Math.max(...points.map((p) => p[0]))
   const minV = Math.min(...points.map((p) => p[1])), maxV = Math.max(...points.map((p) => p[1]))
   const width = maxU - minU, height = maxV - minV
-  const tipWidth = Math.max(...points.filter((p) => p[1] > 50).map((p) => Math.abs(p[0]))) * 2
-  const lowerWidth = Math.max(...points.filter((p) => p[1] < -12).map((p) => Math.abs(p[0]))) * 2
+  const span = (rows) => Math.max(...rows.map((p) => p[0])) - Math.min(...rows.map((p) => p[0]))
+  const tipWidth = span(points.filter((p) => p[1] > 50)), lowerWidth = span(points.filter((p) => p[1] < -5))
   console.log(`spear aperture-frame extents U[${minU.toFixed(2)},${maxU.toFixed(2)}] V[${minV.toFixed(2)},${maxV.toFixed(2)}]; ${width.toFixed(2)}×${height.toFixed(2)} (${(height / width).toFixed(2)}:1), tip width ${tipWidth.toFixed(2)}`)
   assert.ok(maxV > 54.9 && minV < -28.9)
   assert.ok(height / width > 1.49 && height / width < 1.68)
   assert.ok(width > 50 && width < 56)
   assert.ok(tipWidth < 7)
-  assert.ok(lowerWidth > 40)
-  // A cinch must retreat on BOTH sides, then flare out again toward the heel.
+  assert.ok(lowerWidth > 50)
+  // A corner notch retreats on BOTH sides below the barbs, then the stem flares.
   function edgesAt(y) {
-    const row = points.filter(p => Math.abs(p[1] - y) < 0.72).map(p => p[0])
+    const row = points.filter(p => Math.abs(p[1] - y) < 0.36).map(p => p[0])
     assert.ok(row.length > 0)
     return [-Math.min(...row), Math.max(...row)]
   }
-  const shoulders = edgesAt(-9), notches = edgesAt(-13.4), heel = edgesAt(-19)
+  const barbs = edgesAt(-9), notches = edgesAt(-12.3), stem = edgesAt(-16)
   for (let side = 0; side < 2; side++) {
-    assert.ok(shoulders[side] - notches[side] > 3)
-    assert.ok(heel[side] - notches[side] > 2)
+    assert.ok(barbs[side] - notches[side] > 5)
+    assert.ok(stem[side] - notches[side] > 1.5)
   }
   spear.dispose()
 })
 
-test('normals and triangles remain finite, with continuous shading across original UV seams', () => {
-  const spear = createSpearGeometry(stone, screen), position = spear.attributes.position.array, normals = spear.attributes.normal.array
-  const duplicates = new Map()
+test('the point is a thin biconvex blade with no central keel', () => {
+  const spear = createSpearGeometry(screen), points = projected(spear)
+  const front = Math.max(...points.map((p) => p[2])), back = Math.min(...points.map((p) => p[2]))
+  const width = Math.max(...points.map((p) => p[0])) - Math.min(...points.map((p) => p[0]))
+  // Knapped points run roughly four to six times wider than they are thick.
+  assert.ok(width / (front - back) > 4 && width / (front - back) < 7)
+  // Across the widest part of the blade the middle third stays near full
+  // thickness: a lens, not a ridge falling away from a centre line.
+  const band = points.filter((p) => p[2] > -3 && p[1] > 12 && p[1] < 16)
+  const depth = (from, to) => {
+    const part = band.filter((p) => p[0] >= from && p[0] < to).map((p) => p[2])
+    return part.reduce((sum, value) => sum + value, 0) / part.length
+  }
+  const middle = depth(-2, 2)
+  assert.ok(Math.abs(depth(-7, -4) - middle) < 1.6 && Math.abs(depth(4, 7) - middle) < 1.6)
+  spear.dispose()
+})
+
+test('mesh is closed, finite and consistently wound', () => {
+  const spear = createSpearGeometry(screen), position = spear.attributes.position.array, normals = spear.attributes.normal.array
   for (let k = 0; k < position.length; k += 3) {
     assert.ok(Number.isFinite(position[k] + position[k + 1] + position[k + 2]))
     const length = Math.hypot(normals[k], normals[k + 1], normals[k + 2])
     assert.ok(Number.isFinite(length) && length > 0.9 && length < 1.1)
-    const key = `${original[k]},${original[k + 1]},${original[k + 2]}`
-    if (duplicates.has(key)) {
-      const before = duplicates.get(key)
-      assert.deepEqual(position.subarray(k, k + 3), position.subarray(before, before + 3))
-      assert.deepEqual(normals.subarray(k, k + 3), normals.subarray(before, before + 3))
-    } else duplicates.set(key, k)
   }
-  let newlyCollapsed = 0
-  const area = (pixels, a, b, c) => {
-    const x1 = pixels[b] - pixels[a], y1 = pixels[b + 1] - pixels[a + 1], z1 = pixels[b + 2] - pixels[a + 2]
-    const x2 = pixels[c] - pixels[a], y2 = pixels[c + 1] - pixels[a + 1], z2 = pixels[c + 2] - pixels[a + 2]
-    return Math.hypot(y1 * z2 - z1 * y2, z1 * x2 - x1 * z2, x1 * y2 - y1 * x2)
+  // Every edge is shared by exactly two triangles, in opposite directions.
+  const edges = new Map(), index = spear.index.array
+  let volume = 0
+  for (let i = 0; i < index.length; i += 3) {
+    for (let e = 0; e < 3; e++) {
+      const a = index[i + e], b = index[i + (e + 1) % 3]
+      assert.notEqual(a, b)
+      edges.set(`${a},${b}`, (edges.get(`${a},${b}`) ?? 0) + 1)
+    }
+    const [a, b, c] = [0, 1, 2].map((e) => new THREE.Vector3().fromArray(position, index[i + e] * 3))
+    volume += a.dot(b.cross(c)) / 6
   }
-  for (let i = 0; i < spear.index.array.length; i += 3) {
-    const a = spear.index.array[i] * 3, b = spear.index.array[i + 1] * 3, c = spear.index.array[i + 2] * 3
-    if (area(original, a, b, c) > 1e-6 && area(position, a, b, c) <= 1e-8) newlyCollapsed++
+  for (const [edge, uses] of edges) {
+    assert.equal(uses, 1)
+    assert.equal(edges.get(edge.split(',').reverse().join(',')), 1)
   }
-  assert.equal(newlyCollapsed, 0)
+  assert.ok(volume > 0)
   assert.ok(Number.isFinite(spear.boundingSphere.radius))
   spear.dispose()
 })
 
 test('spear remains an editable neutral source with a centered square player', () => {
-  const spear = createSpearGeometry(stone, screen), source = new Float32Array(spear.attributes.position.array)
+  const spear = createSpearGeometry(screen), source = new Float32Array(spear.attributes.position.array)
   const edit = createRockDeformer(spear, screen)
   edit.apply()
   assert.deepEqual(edit.geometry.attributes.position.array, source)

@@ -97,29 +97,39 @@ export function createScreenLightMaterial(source) {
         float stepLength = (farT - nearT) / 12.0;
         vec3 scattered = vec3(0.0);
         float transmission = 1.0;
-        for (int i = 0; i < 12; i++) {
-          vec3 point = beamCamera + direction * (nearT + (float(i) + 0.5) * stepLength);
-          vec2 radius = screenGlowHalfSize + point.z * beamSpread;
-          vec2 sourceUv = point.xy / (2.0 * radius) + 0.5;
-          float edge = 1.0 - max(abs(point.x) / radius.x, abs(point.y) / radius.y);
-          float softEdge = smoothstep(0.0, 0.36, edge);
-          float along = clamp((point.z - beamStart) / max(beamReach - beamStart, 0.01), 0.0, 1.0);
-          float falloff = smoothstep(0.0, 0.14, along) * pow(1.0 - along, 1.7);
-          // Broad, slowly drifting aerosol wisps, with a few softer shafts.
-          float thread = sin(sourceUv.x * 22.0 + sourceUv.y * 9.0 + sin(sourceUv.y * 8.0) * 0.7);
-          float shafts = pow(max(thread, 0.0), 5.0);
-          float wisp = 0.78 + 0.22 * sin(point.x * 0.21 + point.z * 0.18 - beamTime * 0.12)
-            * sin(point.y * 0.24 - point.z * 0.11 + beamTime * 0.08);
-          float density = (beamHaze * 0.45 + beamStrength * (0.22 + shafts * 0.78))
-            * softEdge * falloff * wisp;
-          float scatter = 1.0 - exp(-density * stepLength * 0.018);
-          scattered += transmission * softenedVideoLight(sourceUv) * scatter;
-          transmission *= 1.0 - scatter;
+        // The footage is already blurred across wide taps, so it changes far
+        // more slowly along the ray than the haze does. Read it at five points
+        // and blend between them: 15 video fetches per pixel instead of 36.
+        vec3 lightBefore = softenedVideoLight((beamCamera + direction * nearT).xy
+          / (2.0 * (screenGlowHalfSize + (beamCamera.z + direction.z * nearT) * beamSpread)) + 0.5);
+        for (int segment = 0; segment < 4; segment++) {
+          vec3 end = beamCamera + direction * (nearT + float(segment + 1) * 3.0 * stepLength);
+          vec3 lightAfter = softenedVideoLight(end.xy / (2.0 * (screenGlowHalfSize + end.z * beamSpread)) + 0.5);
+          for (int part = 0; part < 3; part++) {
+            vec3 point = beamCamera + direction * (nearT + (float(segment * 3 + part) + 0.5) * stepLength);
+            vec2 radius = screenGlowHalfSize + point.z * beamSpread;
+            vec2 sourceUv = point.xy / (2.0 * radius) + 0.5;
+            float edge = 1.0 - max(abs(point.x) / radius.x, abs(point.y) / radius.y);
+            float softEdge = smoothstep(0.0, 0.36, edge);
+            float along = clamp((point.z - beamStart) / max(beamReach - beamStart, 0.01), 0.0, 1.0);
+            float falloff = smoothstep(0.0, 0.14, along) * pow(1.0 - along, 1.7);
+            // Broad, slowly drifting aerosol wisps, with a few softer shafts.
+            float thread = sin(sourceUv.x * 22.0 + sourceUv.y * 9.0 + sin(sourceUv.y * 8.0) * 0.7);
+            float shafts = pow(max(thread, 0.0), 5.0);
+            float wisp = 0.78 + 0.22 * sin(point.x * 0.21 + point.z * 0.18 - beamTime * 0.12)
+              * sin(point.y * 0.24 - point.z * 0.11 + beamTime * 0.08);
+            float density = (beamHaze * 0.45 + beamStrength * (0.22 + shafts * 0.78))
+              * softEdge * falloff * wisp;
+            float scatter = 1.0 - exp(-density * stepLength * 0.018);
+            scattered += transmission * mix(lightBefore, lightAfter, (float(part) + 0.5) / 3.0) * scatter;
+            transmission *= 1.0 - scatter;
+          }
+          lightBefore = lightAfter;
         }
         float phase = 0.65 + 0.35 * pow(abs(direction.z), 6.0);
-        gl_FragColor = vec4(scattered * screenClear * phase * 0.62, 0.0);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
+        // Drawn into a small offscreen target, which three treats as linear:
+        // encode here so the composite adds exactly what the screen would get.
+        gl_FragColor = sRGBTransferOETF(vec4(scattered * screenClear * phase * 0.62, 0.0));
       }
     `,
     transparent: true,
@@ -127,8 +137,37 @@ export function createScreenLightMaterial(source) {
     blending: THREE.AdditiveBlending,
     premultipliedAlpha: true,
     depthWrite: false,
-    depthTest: true,
+    // The volume lies between the stone's face and the camera, so nothing in
+    // the scene can occlude it; its target carries no depth buffer.
+    depthTest: false,
     side: THREE.FrontSide,
+    toneMapped: false,
+  })
+}
+
+/** Adds the offscreen haze over the finished frame, stretched to the screen. */
+export function createScreenLightComposite(texture) {
+  return new THREE.ShaderMaterial({
+    uniforms: { beamMap: { value: texture } },
+    vertexShader: /* glsl */`
+      varying vec2 vBeamUv;
+      void main() {
+        vBeamUv = position.xy * 0.5 + 0.5;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform sampler2D beamMap;
+      varying vec2 vBeamUv;
+      void main() {
+        gl_FragColor = vec4(texture2D(beamMap, vBeamUv).rgb, 0.0);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    premultipliedAlpha: true,
+    depthWrite: false,
+    depthTest: false,
     toneMapped: false,
   })
 }

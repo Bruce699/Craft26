@@ -5,7 +5,9 @@ import * as THREE from 'three'
 import { createScreenGlowMaterial } from './screenGlowMaterial'
 import { createRockDeformer } from './rockGeometry'
 import { createSpearOpening } from './spearOpening'
-import { createSpearGeometry } from './spearGeometry'
+import { createSpearGeometry, spearBladeFrame } from './spearGeometry'
+import { createFlintReliefTexture } from './roughStoneBump'
+import { flintSurfaceReady, loadFlintSurface } from './flintSurface'
 import { createVideoWindowDeformer } from './videoWindowGeometry'
 import { videoWindowDefaults } from './videoWindowControls'
 import { shapeDefaults, flattenShape } from './rockShapeControls'
@@ -18,7 +20,8 @@ import { createRockApproach, approachZ } from './rockApproach'
 
 const MODEL_URL = '/internet-design/marcd_stone_smooth.gltf'
 const BUMP_URL = '/internet-design/stone_nm_1k.jpg'
-const SPEAR_BUMP_URL = '/internet-design/v2/rock_face_03_disp_1k.png'
+// V2 bakes its own relief; this 1px image only satisfies the shared loader.
+const BLANK_URL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 const ENVIRONMENT_URL = '/internet-design/studio_1k_bw.hdr'
 const DRACO_PATH = '/internet-design/draco/'
 const CAMERA_FOV = 24
@@ -127,8 +130,14 @@ function useCoverVideoTexture(video, frameAspect) {
 }
 
 function RockModel({ version, video, settings, shape, videoWindow, sculpt, backdrop, lighting, screenLight, sculptApiRef, onStrokeCountChange, onExpand, onReady }) {
+  // V2's surface bakes in a worker while the scan (used for the player's
+  // placement) downloads; suspend until both are in hand.
+  if (version === 2 && !flintSurfaceReady()) {
+    useGLTF.preload(MODEL_URL, DRACO_PATH)
+    throw loadFlintSurface()
+  }
   const { nodes, scene } = useGLTF(MODEL_URL, DRACO_PATH)
-  const bumpSource = useTexture(version === 2 ? SPEAR_BUMP_URL : BUMP_URL)
+  const bumpSource = useTexture(version === 2 ? BLANK_URL : BUMP_URL)
   const reducedMotion = useReducedMotion()
   const cameraRef = useRef(null)
   const motionRef = useRef(null)
@@ -167,7 +176,7 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
   }, [nodes, scene])
 
   const deformer = useMemo(() => {
-    const source = version === 2 ? createSpearGeometry(geometries.stone, geometries.screen) : geometries.stone
+    const source = version === 2 ? createSpearGeometry(geometries.screen) : geometries.stone
     const base = createRockDeformer(source, geometries.screen)
     if (version === 2) source.dispose()
     return version === 2 ? createSpearOpening(base) : createVideoWindowDeformer(base, geometries.screen)
@@ -178,7 +187,9 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
     cursorRef: brushCursorRef, onStrokeCountChange,
   })
   const videoTexture = useCoverVideoTexture(video, deformer.aspect)
-  const stoneSurface = useMemo(() => createScreenGlowMaterial(deformer.frame, version), [deformer, version])
+  const stoneSurface = useMemo(() => createScreenGlowMaterial(
+    deformer.frame, version, version === 2 ? spearBladeFrame(geometries.screen) : undefined,
+  ), [deformer, version, geometries])
 
   useLayoutEffect(() => {
     if (stoneMaterialRef.current) stoneMaterialRef.current.needsUpdate = true
@@ -195,9 +206,8 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
     uniforms.screenGlowStrength.value = settings.screenGlow
     uniforms.screenGlowReady.value = videoTexture && video?.readyState >= 2 && video.videoWidth > 0 ? 1 : 0
     if (version === 2) {
-      uniforms.roughStoneFlakeScale.value = settings.flakeScale ?? 1
       uniforms.roughStoneDetail.value = settings.detail ?? 1
-      uniforms.roughStoneGrain.value = settings.grain ?? 0.12
+      uniforms.roughStoneGrain.value = settings.grain ?? 0.5
     }
   })
 
@@ -207,12 +217,16 @@ function RockModel({ version, video, settings, shape, videoWindow, sculpt, backd
   }, [deformer, brushGeometry])
 
   const bumpTexture = useMemo(() => {
+    if (version === 2) {
+      const texture = createFlintReliefTexture()
+      texture.anisotropy = Math.min(8, maxAnisotropy)
+      return texture
+    }
     const texture = bumpSource.clone()
     texture.colorSpace = THREE.NoColorSpace
     // The stone shader samples an interior atlas patch in deformed model space.
     // Preserve detail at grazing angles, without stretching the original UVs.
     texture.anisotropy = Math.min(8, maxAnisotropy)
-    if (version === 2) texture.wrapS = texture.wrapT = THREE.RepeatWrapping
     texture.needsUpdate = true
     return texture
   }, [bumpSource, maxAnisotropy, version])
