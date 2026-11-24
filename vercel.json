@@ -5,7 +5,9 @@
   "outputDirectory": "dist",
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/internet-design", "destination": "/index.html" },
-    { "source": "/internet-design/v2", "destination": "/index.html" }
+    {
+      "source": "/internet-design",
+      "destination": "/internet-design-long-feed/index.html"
+    }
   ]
 }

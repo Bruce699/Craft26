@@ -11,12 +11,11 @@ if (import.meta.env.DEV) {
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import Workspace from './Workspace'
-import 'dialkit/styles.css'
+import App from './App'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Workspace />
+    <App />
   </React.StrictMode>,
 )
